@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Workaround: Fedora's /usr/bin/start-hyprland currently crashes on this setup
+# with std::system_error (Resource deadlock avoided).
+
+# Ensure user systemd and dbus know we're on a Wayland Hyprland session.
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_DESKTOP=Hyprland
+export XDG_SESSION_TYPE=wayland
+
+if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+  dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true
+fi
+
+exec Hyprland

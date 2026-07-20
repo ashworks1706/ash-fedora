@@ -1,0 +1,15 @@
+# Secrets
+config/quickshell/ii/secrets/
+config/illogical-impulse/config.local.json
+
+# Local state/cache
+.cache/
+.state/
+state/
+cache/
+
+# Editor and OS noise
+*.swp
+*.swo
+*~
+.DS_Store
