@@ -41,6 +41,8 @@ All endpoints require the Tailscale owner identity that `tailscale serve` adds
 | `POST /api/<service>/start\|stop` | start/stop one of the whitelisted services |
 | `GET /api/ai/status` | models, which are loaded, per-model context/slots/speed/tokens served |
 | `POST /api/ai/load/<model>` \| `POST /api/ai/unload` | warm a model up / unload all models |
+| `GET /api/notify` | alert switches, recent notifications (from ntfy), subscribe info |
+| `POST /api/notify/settings` \| `POST /api/notify/test` | toggle alerts (`{"enabled": bool, "events": {key: bool}}`) / send a test |
 | `POST /api/paste-image` | used by the web terminal: saves an image, returns its path |
 
 The NVIDIA GPU is only queried while it is already awake and the dashboard is open:

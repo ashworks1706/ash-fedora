@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# notify — push a notification to your phone/Mac via the self-hosted ntfy server.
+#
+#   notify "training done"                      simple message
+#   notify -t "Build" -p high "deploy failed"   title, priority (min|low|default|high|urgent)
+#   notify -g rocket -c https://example.com msg tags (emoji names) and a click-through URL
+#   some-command | notify                       message from stdin
+#   notify run python train.py --epochs 10      run a command, notify when it finishes
+#                                               (success/failure, duration, exit code kept)
+set -uo pipefail
+
+conf="${NTFY_CLIENT_ENV:-$HOME/.config/ntfy/client.env}"
+# shellcheck disable=SC1090
+[[ -f "$conf" ]] && . "$conf"
+: "${NTFY_URL:=http://127.0.0.1:2586}" "${NTFY_TOPIC:=$(hostname -s)}" "${NTFY_TOKEN:=}"
+
+title="" priority="" tags="" click=""
+
+send() {  # send MESSAGE
+  local args=(-s -o /dev/null -w '%{http_code}' --max-time 10 -d "$1")
+  [[ -n "$NTFY_TOKEN" ]] && args+=(-H "Authorization: Bearer $NTFY_TOKEN")
+  args+=(-H "Title: ${title:-$(hostname -s)}")
+  [[ -n "$priority" ]] && args+=(-H "Priority: $priority")
+  [[ -n "$tags" ]] && args+=(-H "Tags: $tags")
+  [[ -n "$click" ]] && args+=(-H "Click: $click")
+  local code
+  code=$(curl "${args[@]}" "$NTFY_URL/$NTFY_TOPIC") || code=000
+  [[ "$code" == 200 ]] || { echo "notify: ntfy returned HTTP $code" >&2; return 1; }
+}
+
+if [[ "${1:-}" == "run" ]]; then
+  shift
+  [[ $# -gt 0 ]] || { echo "usage: notify run COMMAND [ARGS...]" >&2; exit 2; }
+  start=$(date +%s)
+  "$@"; status=$?
+  secs=$(( $(date +%s) - start ))
+  if (( secs < 60 )); then dur="${secs}s"
+  elif (( secs < 3600 )); then dur="$((secs/60))m $((secs%60))s"
+  else dur="$((secs/3600))h $(printf '%02d' $((secs%3600/60)))m"; fi
+  title="${title:-$(basename "$1") $( ((status)) && echo failed || echo finished)}"
+  if (( status )); then priority=high; tags="x"; else tags="white_check_mark"; fi
+  send "$* — exit $status after $dur (in $(pwd | sed "s|^$HOME|~|"))"
+  exit $status
+fi
+
+while getopts "t:p:g:c:h" opt; do
+  case $opt in
+    t) title=$OPTARG ;; p) priority=$OPTARG ;; g) tags=$OPTARG ;; c) click=$OPTARG ;;
+    *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+msg="$*"
+[[ -z "$msg" && ! -t 0 ]] && msg=$(cat)
+[[ -n "$msg" ]] || { echo "usage: notify [-t title] [-p priority] MESSAGE   (notify -h)" >&2; exit 2; }
+send "$msg"

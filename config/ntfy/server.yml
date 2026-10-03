@@ -1,0 +1,28 @@
+# ntfy: push notifications to your phone and browsers, self-hosted on this machine.
+# Reached only over Tailscale (tailscale serve :8447 -> 127.0.0.1:2586).
+# Secrets (web push private key) come from ~/.config/ntfy/env, not this file.
+
+base-url: "https://__TS_HOST__:8447"
+listen-http: "127.0.0.1:2586"
+behind-proxy: true
+
+# Message history (so devices that were offline catch up) and accounts
+cache-file: "__HOME__/.local/share/ntfy/data/cache.db"
+cache-duration: "72h"
+auth-file: "__HOME__/.local/share/ntfy/data/auth.db"
+auth-default-access: "deny-all"   # only your account can read or publish
+enable-login: true                # web app login (Mac browser)
+enable-signup: false
+
+# iPhone instant delivery: iOS only wakes apps through Apple's push service, so ntfy
+# forwards a content-free poll request via ntfy.sh; the phone then fetches the actual
+# message from this server over Tailscale. Message text never leaves this machine.
+upstream-base-url: "https://ntfy.sh"
+
+# Browser push (Mac: notifications even with the tab closed)
+web-push-file: "__HOME__/.local/share/ntfy/data/webpush.db"
+web-push-email-address: "webpush@ash-fedora.invalid"   # contact for push services; needn't be real
+
+attachment-cache-dir: "__HOME__/.local/share/ntfy/data/attachments"
+attachment-total-size-limit: "200M"
+attachment-file-size-limit: "15M"

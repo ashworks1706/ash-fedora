@@ -81,6 +81,7 @@ limg() {  # send the clipboard image to the laptop; copies its path for Cmd+V
 | 8080 | code-server | `:8444` (tailnet) |
 | 8090 | Moonlight Web | `:10000` (tailnet) |
 | 7681 | ttyd | `:8445` (tailnet) |
+| 2586 | ntfy (notifications) | `:8447` (tailnet, login required) |
 | 8100 | llama-swap (local AI) | `:8100` (tailnet, API key required) |
 | 8095 | dashboard API | `/api` on `:443` and `:8445` (tailnet) |
 | 47984–48010 | Sunshine | Tailscale interface only (firewall) |

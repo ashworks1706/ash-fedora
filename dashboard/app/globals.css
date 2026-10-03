@@ -202,3 +202,16 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: s
 .skeleton { color: var(--faint); }
 
 .meta { color: var(--muted); font-size: 12px; }
+
+/* switch */
+.switch {
+  width: 34px; height: 20px; border-radius: 999px; border: 1px solid var(--line-strong);
+  background: var(--line); position: relative; cursor: pointer; flex: none; padding: 0;
+  transition: background .15s;
+}
+.switch span {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg); box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s;
+}
+.switch.on { background: var(--ok); border-color: var(--ok); }
+.switch.on span { transform: translateX(14px); }

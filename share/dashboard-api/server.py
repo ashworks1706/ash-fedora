@@ -88,13 +88,22 @@ def sunshine_action(action):
 
 
 def demo_active():
-    return ":8443" in run("tailscale", "funnel", "status").stdout
+    # `demo` runs Funnel in the foreground; those sessions only appear under "Foreground"
+    # in the JSON status, not in the plain-text `tailscale funnel status`.
+    try:
+        st = json.loads(run("tailscale", "serve", "status", "--json").stdout or "{}")
+    except ValueError:
+        return False
+    return ":8443" in json.dumps(st.get("Foreground", {})) + json.dumps(st.get("AllowFunnel", {}))
 
 
 def demo_action(action):
     if action != "stop":
         return False  # starting a public demo needs a port: `demo PORT` on the laptop
-    return run("tailscale", "funnel", "--https=8443", "off").returncode == 0
+    run("pkill", "-f", "^tailscale funnel --https=8443 ")  # only the session `demo` runs (anchored)
+    run("tailscale", "funnel", "--https=8443", "off")
+    time.sleep(1)
+    return not demo_active()
 
 
 def unit(name):
@@ -112,6 +121,8 @@ SERVICES = {
                  "desc": "llama-swap: one OpenAI-compatible endpoint for every local model"},
     "hermes":   {**unit("hermes-gateway.service"), "name": "Hermes", "port": None, "local": None,
                  "desc": "Hermes agent (Discord bot); local fallback runs on the model server"},
+    "ntfy":     {**unit("ntfy.service"), "name": "Notifications", "port": 8447, "local": 2586,
+                 "desc": "ntfy: pushes alerts and notify messages to your phone and browsers"},
     "sunshine": {"status": sunshine_active, "act": sunshine_action, "name": "Sunshine",
                  "port": None, "local": 47989,
                  "desc": "Streams the screen to Moonlight apps and Desktop (AMD VAAPI)"},
@@ -452,6 +463,220 @@ def ai_load(model_id):
         return True
 
 
+# ---------------------------------------------------------------- notifications (ntfy)
+
+NOTIFY_SETTINGS = os.path.expanduser("~/.config/dashboard/notify.json")
+NOTIFY_EVENTS = [  # key, default, label, description
+    ("unplugged", True, "Unplugged", "On battery: closing the lid will suspend and remote access drops"),
+    ("plugged", False, "Plugged in", "Back on AC power"),
+    ("battery_low", True, "Battery low", "Battery at 20%, and again at 10%"),
+    ("service_failed", True, "Service crashed", "A service failed or crashed (stopping one yourself never alerts)"),
+    ("boot", True, "Back online", "The laptop rebooted and services are back"),
+    ("disk", True, "Disk almost full", "Root disk above 90%"),
+    ("hot", True, "Running hot", "CPU at 95°C or GPU at 90°C for 3 minutes"),
+    ("demo", True, "Public demo", "A public demo link went live, and a reminder after an hour"),
+    ("ssh", True, "SSH login", "Someone signed in over Tailscale SSH"),
+    ("taildrop", True, "File received", "A file arrived via Taildrop"),
+    ("model", False, "AI model", "A model loaded on the GPU or unloaded"),
+]
+WATCHED_UNITS = ["tmux", "web-terminal", "code-server", "moonlight-web", "llama-swap",
+                 "hermes-gateway", "taildrop-receive", "ntfy"]
+_recent = collections.deque(maxlen=25)
+
+
+def notify_settings():
+    try:
+        with open(NOTIFY_SETTINGS) as f:
+            saved = json.load(f)
+    except (OSError, ValueError):
+        saved = {}
+    events = {k: saved.get("events", {}).get(k, default) for k, default, *_ in NOTIFY_EVENTS}
+    return {"enabled": saved.get("enabled", True), "events": events}
+
+
+def save_notify_settings(settings):
+    os.makedirs(os.path.dirname(NOTIFY_SETTINGS), exist_ok=True)
+    with open(NOTIFY_SETTINGS, "w") as f:
+        json.dump(settings, f, indent=2)
+
+
+def ntfy_client():
+    return {k: env_value("~/.config/ntfy/client.env", k) for k in ("NTFY_URL", "NTFY_TOPIC", "NTFY_TOKEN")}
+
+
+def send_notification(title, message, priority="default", tags="", click="", event=None):
+    """Publish to ntfy. Returns True on success; failures are kept in the recent list."""
+    if event is not None:
+        st = notify_settings()
+        if not st["enabled"] or not st["events"].get(event, False):
+            return False
+    c = ntfy_client()
+    req = urllib.request.Request(f"{c['NTFY_URL'] or 'http://127.0.0.1:2586'}/{c['NTFY_TOPIC'] or 'ash-fedora'}",
+                                 data=message.encode(), method="POST")
+    req.add_header("Title", title)
+    req.add_header("Priority", priority)
+    if tags:
+        req.add_header("Tags", tags)
+    if click:
+        req.add_header("Click", click)
+    if c["NTFY_TOKEN"]:
+        req.add_header("Authorization", f"Bearer {c['NTFY_TOKEN']}")
+    try:
+        with urllib.request.urlopen(req, timeout=10):
+            ok = True
+    except (urllib.error.URLError, OSError):
+        ok = False
+    _recent.appendleft({"t": int(time.time()), "title": title, "message": message,
+                        "event": event or "manual", "ok": ok})
+    return ok
+
+
+def unit_props(unit):
+    out = run("systemctl", "--user", "show", f"{unit}.service",
+              "-p", "ActiveState", "-p", "Result", "-p", "NRestarts").stdout
+    return dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+
+
+def journal_since(since, *args):
+    return run("journalctl", "--no-pager", "-q", "-o", "cat", "--since", f"@{int(since)}", *args).stdout
+
+
+def notifier():
+    """Watch for events every 15 s and publish the enabled ones."""
+    dash = f"https://{HOST}"
+    last = time.time()
+    state = {"plugged": None, "bat_alert": 100, "disk_alert": False, "hot_since": None,
+             "hot_alert": False, "demo_since": None, "demo_reminded": False, "models": None,
+             "units": {u: unit_props(u) for u in WATCHED_UNITS}}
+    if time.time() - psutil.boot_time() < 900:
+        time.sleep(60)  # let services finish starting
+        down = [u for u in WATCHED_UNITS if unit_active(f"{u}.service") is False
+                and run("systemctl", "--user", "is-enabled", f"{u}.service").stdout.strip() == "enabled"]
+        send_notification("Back online", "Rebooted; " + (f"not running: {', '.join(down)}" if down
+                          else "all services are up"), tags="arrows_counterclockwise", click=dash, event="boot")
+    while True:
+        time.sleep(15)
+        now = time.time()
+        quiet = os.path.exists(os.path.expanduser("~/.config/remote-off"))
+
+        # power
+        _, _, bat = sensors()
+        if bat:
+            plugged, pct = bat["plugged"], bat["percent"]
+            if state["plugged"] is True and plugged is False:
+                send_notification("Unplugged", f"On battery at {pct}%. Closing the lid will suspend the "
+                                  "laptop and remote access will drop.", "high", "electric_plug", dash, "unplugged")
+            if state["plugged"] is False and plugged is True:
+                send_notification("Plugged in", f"Charging at {pct}%.", "low", "zap", dash, "plugged")
+                state["bat_alert"] = 100
+            if not plugged:
+                for level in (20, 10):
+                    if pct <= level < state["bat_alert"]:
+                        send_notification("Battery low", f"{pct}% and on battery.", "urgent" if level == 10 else "high",
+                                          "battery", dash, "battery_low")
+                        state["bat_alert"] = level
+            state["plugged"] = plugged
+
+        # crashed / failed services (clean stops have Result=success and never alert)
+        for u in WATCHED_UNITS:
+            cur, prev = unit_props(u), state["units"].get(u, {})
+            crashed = cur.get("NRestarts", "0") != prev.get("NRestarts", "0")
+            failed = cur.get("ActiveState") == "failed" and prev.get("ActiveState") != "failed"
+            if (crashed or failed) and not quiet:
+                restarted = crashed and cur.get("ActiveState") == "active"
+                what = "crashed and was restarted" if restarted else "failed"
+                detail = "" if restarted else f" (result: {cur.get('Result', '?')})"
+                send_notification(f"{u} {what}", f"{u}.service {what}{detail}. "
+                                  f"Logs: journalctl --user -u {u}", "high", "warning", dash, "service_failed")
+            state["units"][u] = cur
+
+        # disk (hysteresis: re-arm below 85%)
+        pct = psutil.disk_usage("/").percent
+        if pct >= 90 and not state["disk_alert"]:
+            send_notification("Disk almost full", f"Root disk is {pct:.0f}% full.", "high", "floppy_disk", dash, "disk")
+            state["disk_alert"] = True
+        elif pct < 85:
+            state["disk_alert"] = False
+
+        # heat: sustained 3 minutes (re-arm after cooling down)
+        temps, _, _ = sensors()
+        hot = (temps.get("k10temp") or 0) >= 95 or (_nvidia.get("temp") or 0) >= 90
+        if hot:
+            state["hot_since"] = state["hot_since"] or now
+            if now - state["hot_since"] >= 180 and not state["hot_alert"]:
+                send_notification("Running hot", f"CPU {temps.get('k10temp')}°C, GPU {_nvidia.get('temp', '–')}°C "
+                                  "for 3 minutes.", "high", "fire", dash, "hot")
+                state["hot_alert"] = True
+        else:
+            state["hot_since"], state["hot_alert"] = None, False
+
+        # public demo
+        live = demo_active()
+        if live and state["demo_since"] is None:
+            state["demo_since"], state["demo_reminded"] = now, False
+            send_notification("Public demo is live", f"https://{HOST}:8443 is open to anyone with the link. "
+                              "Stop it with Ctrl+C or from the dashboard.", "default", "globe_with_meridians",
+                              dash, "demo")
+        elif live and now - state["demo_since"] > 3600 and not state["demo_reminded"]:
+            state["demo_reminded"] = True
+            send_notification("Demo still public", "The public demo link has been live for over an hour.",
+                              "high", "globe_with_meridians", dash, "demo")
+        elif not live:
+            state["demo_since"] = None
+
+        # SSH logins (Tailscale SSH audit lines) and Taildrop arrivals
+        for line in journal_since(last, "-u", "tailscaled").splitlines():
+            if "SSH login: user=" in line:
+                who = dict(kv.split("=", 1) for kv in line.split() if "=" in kv)
+                send_notification("SSH login", f"{who.get('ts_user', '?')} as {who.get('user', '?')} from "
+                                  f"{who.get('node', who.get('from', '?')).split('.')[0]}", "default", "key",
+                                  event="ssh")
+        for line in journal_since(last, "--user", "-u", "taildrop-receive", "-t", "tailscale").splitlines():
+            # verbose `tailscale file get` also prints status lines such as "waiting for file..."
+            if line.strip() and "waiting" not in line.lower() and \
+                    any(w in line.lower() for w in ("wrote", "moved", "saved", "received", "downloads")):
+                send_notification("File received", line.strip()[:300], "default", "inbox_tray", event="taildrop")
+
+        # AI model loaded/unloaded
+        loaded = {m["model"] for m in running_models() if "-ngl 0" not in m.get("cmd", "")}
+        if state["models"] is not None and loaded != state["models"] and not quiet:
+            added, removed = loaded - state["models"], state["models"] - loaded
+            send_notification("AI model " + ("loaded" if added else "unloaded"),
+                              ", ".join(sorted(added or removed)), "low", "robot", dash, "model")
+        state["models"] = loaded
+        last = now
+
+
+def ntfy_history(limit=8):
+    """Recent messages from ntfy's own cache (survives restarts; includes `notify` CLI messages)."""
+    c = ntfy_client()
+    url = f"{c['NTFY_URL'] or 'http://127.0.0.1:2586'}/{c['NTFY_TOPIC'] or 'ash-fedora'}/json?poll=1&since=72h"
+    req = urllib.request.Request(url)
+    if c["NTFY_TOKEN"]:
+        req.add_header("Authorization", f"Bearer {c['NTFY_TOKEN']}")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as r:
+            msgs = [json.loads(line) for line in r.read().decode().splitlines() if line.strip()]
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    msgs = [m for m in msgs if m.get("event") == "message"][-limit:]
+    return [{"t": m.get("time"), "title": m.get("title", ""), "message": m.get("message", ""),
+             "event": "ntfy", "ok": True} for m in reversed(msgs)]
+
+
+def notify_view():
+    st = notify_settings()
+    c = ntfy_client()
+    history = ntfy_history()
+    failed = [r for r in _recent if not r["ok"]]  # sends that never reached ntfy
+    return {"enabled": st["enabled"],
+            "events": [{"key": k, "label": label, "desc": desc, "on": st["events"][k]}
+                       for k, _, label, desc in NOTIFY_EVENTS],
+            "recent": (failed + history) if history is not None else list(_recent),
+            "server": f"https://{HOST}:8447", "topic": c["NTFY_TOPIC"] or "ash-fedora",
+            "configured": bool(c["NTFY_TOKEN"])}
+
+
 # ---------------------------------------------------------------- HTTP
 
 class Handler(BaseHTTPRequestHandler):
@@ -482,6 +707,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, info())
         if route == "/ai/models":
             return self._send(200, ai_models())
+        if route == "/notify":
+            return self._send(200, notify_view())
         if route == "/ai/status":
             return self._send(200, ai_status())
         if route == "/metrics":
@@ -500,6 +727,23 @@ class Handler(BaseHTTPRequestHandler):
         route = self._route()
         if route == "/paste-image":
             return self._paste_image()
+        if route == "/notify/test":
+            ok = send_notification("Test from the dashboard", "If you can read this, notifications work.",
+                                   tags="tada", click=ORIGIN)
+            return self._send(200 if ok else 502, {"ok": ok})
+        if route == "/notify/settings":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._send(400, {"error": "invalid JSON"})
+            st = notify_settings()
+            if isinstance(body.get("enabled"), bool):
+                st["enabled"] = body["enabled"]
+            for k, v in (body.get("events") or {}).items():
+                if k in st["events"] and isinstance(v, bool):
+                    st["events"][k] = v
+            save_notify_settings(st)
+            return self._send(200, notify_view())
         if route.startswith("/ai/load/"):
             try:
                 return self._send(200 if ai_load(route[len("/ai/load/"):]) else 404, {"ok": True})
@@ -541,4 +785,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     threading.Thread(target=sampler, daemon=True).start()
+    threading.Thread(target=notifier, daemon=True).start()
     ThreadingHTTPServer(BIND, Handler).serve_forever()

@@ -8,7 +8,7 @@ Nice=10
 CPUWeight=20
 IOWeight=20
 MemoryHigh=64M
-ExecStart=/usr/bin/tailscale file get --loop --conflict=rename %h/Downloads
+ExecStart=/usr/bin/tailscale file get --loop --verbose --conflict=rename %h/Downloads
 Restart=always
 RestartSec=10
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { AI, Activity, Commands, Docs, MetricsGrid, Services } from "@/components/sections";
+import { AI, Activity, Commands, Docs, MetricsGrid, Notifications, Services } from "@/components/sections";
 import { fmt, usePoll, type Info, type Metrics } from "@/lib/api";
 
 export default function Page() {
@@ -23,7 +23,7 @@ export default function Page() {
           </span>
           <span className="spacer" />
           <nav className="topnav">
-            {["services", "ai", "metrics", "processes", "commands", "docs"].map((s) => (
+            {["services", "ai", "metrics", "notifications", "processes", "commands", "docs"].map((s) => (
               <a key={s} href={`#${s}`}>{s === "ai" ? "AI" : s[0].toUpperCase() + s.slice(1)}</a>
             ))}
           </nav>
@@ -53,6 +53,7 @@ export default function Page() {
         <Services info={i} onChange={info.refresh} />
         <AI info={i} m={metrics.data} />
         <MetricsGrid m={metrics.data} info={i} />
+        <Notifications />
         <Activity m={metrics.data} info={i} />
         <Commands info={i} />
         <Docs />

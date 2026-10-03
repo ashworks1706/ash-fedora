@@ -32,3 +32,7 @@ __pycache__/
 
 # Local AI API key
 config/llm/env
+
+# ntfy secrets (web push key, publish token, password)
+config/ntfy/env
+config/ntfy/client.env

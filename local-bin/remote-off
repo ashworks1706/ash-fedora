@@ -12,7 +12,7 @@ fi
 [ $DRY = 1 ] || sudo -v || exit 1        # ask for the password now, before anything changes
 
 run touch "$HOME/.config/remote-off"      # Hyprland skips Sunshine while this exists
-run systemctl --user disable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal
+run systemctl --user disable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal ntfy
 run tailscale serve reset                 # dashboard, VS Code, Desktop and any public demo
 run pkill -x sunshine
 echo "Remote access is off. Disconnecting Tailscale (remote-on brings it all back)."

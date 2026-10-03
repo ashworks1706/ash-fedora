@@ -326,6 +326,98 @@ export function AI({ info, m }: { info: Info | null; m: Metrics | null }) {
   );
 }
 
+/* ------------------------------------------------------------------ notifications */
+
+type NotifyState = {
+  enabled: boolean; configured: boolean; server: string; topic: string;
+  events: { key: string; label: string; desc: string; on: boolean }[];
+  recent: { t: number; title: string; message: string; event: string; ok: boolean }[];
+};
+
+function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label}
+            className={`switch${on ? " on" : ""}`} onClick={() => onChange(!on)}><span /></button>
+  );
+}
+
+export function Notifications() {
+  const [st, setSt] = useState<NotifyState | null>(null);
+  const [test, setTest] = useState<"" | "sending" | "sent" | "failed">("");
+  const load = async () => {
+    try { const r = await fetch("/api/notify", { cache: "no-store" }); if (r.ok) setSt(await r.json()); } catch {}
+  };
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
+  const save = async (body: object) => {
+    const r = await fetch("/api/notify/settings", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard": "1" }, body: JSON.stringify(body),
+    });
+    if (r.ok) setSt(await r.json());
+  };
+  const sendTest = async () => {
+    setTest("sending");
+    const r = await fetch("/api/notify/test", { method: "POST", headers: { "X-Dashboard": "1" } });
+    setTest(r.ok ? "sent" : "failed"); setTimeout(() => setTest(""), 2500); load();
+  };
+
+  return (
+    <section>
+      <SectionHead id="notifications" title="Notifications" hint="ntfy · pushes to your phone and browsers" />
+      <div className="grid g-two">
+        <div className="card flush">
+          <div className="list">
+            <div className="list-row">
+              <span><b style={{ fontWeight: 500 }}>Alerts</b>
+                <div className="meta">{st?.configured ? `topic ${st.topic}` : "ntfy not configured"}</div></span>
+              <span className="btns">
+                <button className="btn" onClick={sendTest} disabled={!st?.configured || test === "sending"}>
+                  {test === "sending" ? "Sending…" : test === "sent" ? "Sent ✓" : test === "failed" ? "Failed" : "Send test"}
+                </button>
+                {st && <Switch on={st.enabled} label="All alerts" onChange={(v) => save({ enabled: v })} />}
+              </span>
+            </div>
+            {st?.events.map((e) => (
+              <div className="list-row" key={e.key} style={{ opacity: st.enabled ? 1 : 0.5 }}>
+                <span style={{ minWidth: 0 }}>{e.label}<div className="meta">{e.desc}</div></span>
+                <Switch on={e.on} label={e.label} onChange={(v) => save({ events: { [e.key]: v } })} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="term">
+            <div className="term-bar"><i /><i /><i /><span className="mono">from your own scripts</span></div>
+            <Cmd text={`notify "training done"`} note="send a message" />
+            <Cmd text="notify run python train.py" note="alert when it finishes" />
+            <Cmd text={`notify -p high -t "Deploy" "failed"`} note="title + priority" />
+          </div>
+          <div className="card" style={{ marginTop: 12 }}>
+            <div className="card-head"><span className="card-desc">Subscribe</span>
+              {st && <a className="btn" href={st.server} target="_blank" rel="noreferrer">Open ntfy</a>}</div>
+            <p className="card-desc" style={{ margin: 0 }}>
+              <b>iPhone:</b> install <b>ntfy</b> → Settings → add server <span className="mono">{st?.server ?? "…"}</span>,
+              sign in as <span className="mono">ash</span> → subscribe to <span className="mono">{st?.topic ?? "…"}</span>.<br />
+              <b>Mac:</b> open ntfy, sign in, subscribe, and allow notifications.<br />
+              Password: <span className="mono">grep NTFY_PASSWORD ~/.config/ntfy/client.env</span>
+            </p>
+          </div>
+          <div className="card flush" style={{ marginTop: 12 }}>
+            <div className="list">
+              {st?.recent.length ? st.recent.slice(0, 6).map((r, i) => (
+                <div className="list-row" key={i}>
+                  <span style={{ minWidth: 0 }}><span className={`dot ${r.ok ? "ok" : "warn"}`} style={{ display: "inline-block", marginRight: 8 }} />{r.title}
+                    <div className="meta" style={{ marginLeft: 16 }}>{r.message}</div></span>
+                  <span className="meta">{fmt.ago(r.t)}</span>
+                </div>
+              )) : <div className="list-row meta">No alerts since the dashboard API started</div>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ processes, sessions, devices */
 
 export function Activity({ m, info }: { m: Metrics | null; info: Info | null }) {

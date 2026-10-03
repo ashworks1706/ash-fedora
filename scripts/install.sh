@@ -38,6 +38,7 @@ declare -A FILES=(
   [config/fish/conf.d/hyprland-autostart.fish]="$XDG_CONFIG_HOME/fish/conf.d/hyprland-autostart.fish"
   [home/.tmux.conf]="$HOME/.tmux.conf"
   [config/systemd/user/code-server.service.d/priority.conf]="$XDG_CONFIG_HOME/systemd/user/code-server.service.d/priority.conf"
+  [config/ntfy/server.yml]="$XDG_CONFIG_HOME/ntfy/server.yml"
   [config/llm/llama-swap.yaml]="$XDG_CONFIG_HOME/llm/llama-swap.yaml"
   [config/sunshine/sunshine.conf]="$XDG_CONFIG_HOME/sunshine/sunshine.conf"
   [config/sunshine/apps.json]="$XDG_CONFIG_HOME/sunshine/apps.json"
