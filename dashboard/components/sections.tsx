@@ -168,7 +168,6 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
           <div className="metric-row mono">
             <span>GPU <b>{temps.amdgpu != null ? `${Math.round(temps.amdgpu)}°C` : "–"}</b></span>
             <span>SSD <b>{temps.nvme != null ? `${Math.round(temps.nvme)}°C` : "–"}</b></span>
-            <span>Fans <b>{now.fans?.length ? now.fans.join(" / ") + " rpm" : "–"}</b></span>
           </div>
           {bat && (
             <div className="metric-row mono">
@@ -176,6 +175,19 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
                 {bat.secs_left ? ` · ${fmt.duration(bat.secs_left)} left` : ""}</span>
             </div>
           )}
+        </MetricCard>
+
+        <MetricCard title="Fans">
+          <div className="metric-value mono">
+            {now.fans?.length ? now.fans.map((f) => f.rpm.toLocaleString()).join(" / ") : "–"}<small>rpm</small>
+          </div>
+          <Chart times={times} series={[{ values: series(h, "fan_cpu"), color: "var(--c1)", label: "CPU fan" },
+                                        { values: series(h, "fan_gpu"), color: "var(--c3)", label: "GPU fan" }]} />
+          <Legend items={(now.fans ?? []).map((f, i): [string, string] => [`${f.name} ${f.rpm.toLocaleString()} rpm`, i ? "var(--c3)" : "var(--c1)"])} />
+          <div className="metric-row mono">
+            <span>profile <b>{now.power_profile ? ({ "low-power": "quiet", performance: "performance", balanced: "balanced", quiet: "quiet" }[now.power_profile] ?? now.power_profile) : "–"}</b></span>
+            <span>{(now.fans ?? []).every((f) => f.rpm === 0) && now.fans?.length ? "fans off" : ""}</span>
+          </div>
         </MetricCard>
 
         <MetricCard title="Disk">
@@ -278,7 +290,7 @@ export function AI({ info, m }: { info: Info | null; m: Metrics | null }) {
               <div className="bar"><span style={{ width: `${(100 * (nv.mem_used ?? 0)) / nv.mem_total}%`, background: "var(--c3)" }} /></div>
               <div className="metric-row mono">
                 <span>VRAM <b>{Math.round(nv.mem_used ?? 0)} / {Math.round(nv.mem_total)} MB</b></span>
-                <span><b>{nv.temp}°C</b> · <b>{nv.power ?? "–"} W</b></span>
+                <span><b>{nv.temp}°C</b> · <b>{nv.power ?? "–"} W</b>{now.fans?.find((f) => f.name === "GPU") ? <> · fan <b>{now.fans.find((f) => f.name === "GPU")!.rpm.toLocaleString()}</b> rpm</> : null}</span>
               </div>
             </>
           ) : <div className="card-desc">Asleep to save battery. Wakes when a chat model loads.</div>}

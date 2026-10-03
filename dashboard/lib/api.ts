@@ -45,6 +45,8 @@ export type Point = {
   temp_gpu: number | null;
   gen_tps: number | null;
   pp_tps: number | null;
+  fan_cpu: number | null;
+  fan_gpu: number | null;
 };
 
 export type Nvidia = {
@@ -66,7 +68,8 @@ export type Now = Point & {
   swap_total: number;
   disk: { total: number; used: number; free: number; percent: number };
   temps: Record<string, number>;
-  fans: number[];
+  fans: { name: string; rpm: number }[];
+  power_profile: string | null;
   battery: { percent: number; plugged: boolean | null; secs_left: number | null } | null;
   igpu_detail: { util: number; mem_used: number; mem_total: number } | null;
   nvidia: Nvidia;

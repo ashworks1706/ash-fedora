@@ -180,8 +180,11 @@ def sensors():
     for name, entries in psutil.sensors_temperatures().items():
         if entries:
             temps[name] = round(entries[0].current, 1)
-    fans = [int(read(f)) for f in sorted(glob.glob("/sys/class/hwmon/hwmon*/fan*_input"))
-            if read(f).isdigit()]
+    fans = []
+    for f in sorted(glob.glob("/sys/class/hwmon/hwmon*/fan*_input")):
+        if read(f).isdigit():
+            label = read(f.replace("_input", "_label")) or os.path.basename(f).replace("_input", "")
+            fans.append({"name": label.replace("_fan", "").upper(), "rpm": int(read(f))})
     bat = psutil.sensors_battery()
     ac = [read(f) == "1" for f in glob.glob("/sys/class/power_supply/*/online")
           if read(os.path.join(os.path.dirname(f), "type")) == "Mains"]
@@ -248,6 +251,8 @@ def sampler():
             "igpu": igpu["util"] if igpu else None, "dgpu": _nvidia.get("util"),
             "temp_cpu": temps.get("k10temp"), "temp_gpu": temps.get("amdgpu"),
             "gen_tps": gen_tps, "pp_tps": pp_tps,
+            "fan_cpu": next((f["rpm"] for f in fans if f["name"] == "CPU"), None),
+            "fan_gpu": next((f["rpm"] for f in fans if f["name"] == "GPU"), None),
         }
         with _lock:
             _history.append(point)
@@ -258,6 +263,8 @@ def sampler():
                 "mem_used": vm.used, "mem_total": vm.total, "swap_used": sw.used, "swap_total": sw.total,
                 "disk": psutil.disk_usage("/")._asdict(), "temps": temps, "fans": fans,
                 "battery": battery, "igpu_detail": igpu, "nvidia": _nvidia,
+                # ACPI platform profile (set by asusctl / power-profiles): drives the fan curve
+                "power_profile": read("/sys/firmware/acpi/platform_profile") or None,
             }
             if watched:
                 _procs = [{"cpu": round(c, 1), "pid": pid, "name": n, "user": u, "rss": r}
