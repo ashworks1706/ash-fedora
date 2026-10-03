@@ -1,0 +1,12 @@
+[Unit]
+Description=Web terminal (ttyd) attached to tmux, tailnet only
+
+[Service]
+# Loopback only; `tailscale serve` exposes it on :8445 and sets Tailscale-User-Login,
+# which ttyd requires (-H). -O rejects websocket connections from other origins.
+ExecStart=%h/.local/share/web-terminal/run.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

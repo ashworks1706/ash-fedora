@@ -10,8 +10,10 @@ Open, reproducible Hyprland + Quickshell setup for Fedora (ASUS G14-friendly bas
 - TTY launcher helper: `local-bin/start-hyprland`
 - Terminal: kitty (`config/kitty`), tmux (`home/.tmux.conf`) with sessions that survive
   closing kitty, SSH disconnects and reboots
-- Remote access from a Mac/iPhone over Tailscale: VS Code and the full desktop in the
-  browser, Moonlight, a dashboard, public demo links. See [docs/REMOTE.md](docs/REMOTE.md)
+- Remote access from a Mac/iPhone over Tailscale: VS Code, a terminal and the full
+  desktop in the browser, Moonlight, public demo links. See [docs/REMOTE.md](docs/REMOTE.md)
+- A Next.js [dashboard](dashboard/README.md) for the machine: services with start/stop,
+  live CPU/GPU/memory/network/thermal graphs, processes, tmux sessions, devices and docs
 - System tweaks (`system/`): lid stays awake on AC, auto-login to a locked desktop,
   backlight permissions
 - Maintenance scripts:
@@ -19,6 +21,7 @@ Open, reproducible Hyprland + Quickshell setup for Fedora (ASUS G14-friendly bas
   - `scripts/install.sh`: user configs, units and scripts (no root)
   - `scripts/install-system.sh`: system files (sudo)
   - `scripts/setup-remote.sh`: remote-access packages and services (sudo)
+  - `scripts/build-dashboard.sh`: build and deploy the dashboard
   - `scripts/sync-from-system.sh`: copy the live setup back into the repo
   - `scripts/check-secrets.sh`: block credentials from being committed
   - `scripts/uninstall.sh`

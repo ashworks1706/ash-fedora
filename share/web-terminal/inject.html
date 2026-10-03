@@ -1,0 +1,81 @@
+<!-- Added to ttyd's built-in page by make-index.sh -->
+<style>
+  @font-face { font-family: "JBM NF"; src: url("/fonts/JetBrainsMonoNerdFontMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: block; }
+  @font-face { font-family: "JBM NF"; src: url("/fonts/JetBrainsMonoNerdFontMono-Bold.ttf") format("truetype"); font-weight: 700; font-display: block; }
+  @font-face { font-family: "JBM NF"; src: url("/fonts/JetBrainsMonoNerdFontMono-Italic.ttf") format("truetype"); font-style: italic; font-display: block; }
+  html, body { background: #141318; }
+  #terminal-container { padding: 6px 0 0 8px; box-sizing: border-box; }
+  #paste-toast {
+    position: fixed; right: 14px; bottom: 14px; z-index: 10; padding: 8px 12px; border-radius: 8px;
+    font: 13px -apple-system, BlinkMacSystemFont, sans-serif; color: #141318; background: #d0bcff;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  #paste-toast.show { opacity: 1; }
+</style>
+<script>
+(() => {
+  const FONT = '"JBM NF", monospace';
+  const toast = (msg) => {
+    let el = document.getElementById("paste-toast");
+    if (!el) { el = document.createElement("div"); el.id = "paste-toast"; document.body.appendChild(el); }
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 2500);
+  };
+  const ready = new Promise((resolve) => {
+    const t = setInterval(() => { if (window.term) { clearInterval(t); resolve(window.term); } }, 30);
+  });
+
+  // Re-measure once the web font is loaded, so cells and icons line up.
+  Promise.all([ready, document.fonts.load('14px "JBM NF"'), document.fonts.load('bold 14px "JBM NF"')])
+    .then(([term]) => {
+      term.options.fontFamily = FONT;
+      term.options.lineHeight = 1.15;
+      setTimeout(() => term.fit && term.fit(), 50);
+    })
+    .catch(() => {});
+
+  // tmux copy (mouse select or copy mode) -> Mac clipboard, via OSC 52.
+  ready.then((term) => {
+    term.parser.registerOscHandler(52, (data) => {
+      const b64 = data.slice(data.indexOf(";") + 1);
+      if (!b64 || b64 === "?") return true;
+      try {
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        navigator.clipboard.writeText(new TextDecoder().decode(bytes)).then(() => toast("Copied"));
+      } catch {}
+      return true;
+    });
+  });
+
+  // Images: upload to the laptop and type the saved path (Claude Code attaches it).
+  async function sendImage(file) {
+    toast("Uploading image…");
+    try {
+      const r = await fetch("/api/paste-image", {
+        method: "POST", headers: { "Content-Type": file.type, "X-Dashboard": "1" }, body: file,
+      });
+      const j = await r.json();
+      if (!r.ok || !j.path) throw new Error(j.error || r.status);
+      (await ready).paste(j.path + " ");
+      toast("Image pasted as file path");
+    } catch (e) {
+      toast("Image paste failed: " + e.message);
+    }
+  }
+  const imageFrom = (list) => [...(list || [])].find((f) => f.type && f.type.startsWith("image/"));
+
+  document.addEventListener("paste", (e) => {
+    const item = [...(e.clipboardData?.items || [])].find((i) => i.kind === "file" && i.type.startsWith("image/"));
+    if (!item) return;                      // plain text: xterm pastes it as usual
+    e.preventDefault(); e.stopImmediatePropagation();
+    sendImage(item.getAsFile());
+  }, true);
+  document.addEventListener("dragover", (e) => e.preventDefault(), true);
+  document.addEventListener("drop", (e) => {
+    const file = imageFrom(e.dataTransfer?.files);
+    if (!file) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    sendImage(file);
+  }, true);
+})();
+</script>

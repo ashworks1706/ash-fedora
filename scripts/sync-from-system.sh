@@ -45,13 +45,15 @@ copy "$CFG/fish/conf.d/hyprland-autostart.fish" config/fish/conf.d/hyprland-auto
 copy "$HOME/.tmux.conf"                  home/.tmux.conf
 
 echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"
-for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality; do
+for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal; do
   copy "$CFG/systemd/user/$unit.service" "config/systemd/user/$unit.service"
 done
 copy "$CFG/sunshine/sunshine.conf"       config/sunshine/sunshine.conf   # not sunshine_state.json (credentials, pairings)
 copy "$CFG/sunshine/apps.json"           config/sunshine/apps.json
-copy "$HOME/.local/share/dashboard/index.html"    share/dashboard/index.html
 copy "$HOME/.local/share/dashboard-api/server.py" share/dashboard-api/server.py
+for f in inject.html make-index.sh run.sh; do   # not index.html (built) or fonts (downloaded)
+  copy "$HOME/.local/share/web-terminal/$f" "share/web-terminal/$f"
+done
 # code-server's config.yaml holds the password: only a template lives in the repo.
 for bin in start-hyprland kitty-tmux t tmux-server-start demo remote-off remote-on internal-mic-quality; do
   copy "$HOME/.local/bin/$bin" "local-bin/$bin"

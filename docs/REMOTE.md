@@ -19,9 +19,10 @@ Pair Moonlight (iPhone app) and Moonlight Web once via Sunshine's web UI at
 
 | Address (tailnet only) | What |
 |---|---|
-| `https://<host>.ts.net` | Dashboard: status, start/stop, dev-server preview, copyable commands |
+| `https://<host>.ts.net` | [Dashboard](../dashboard/README.md): services with start/stop, live graphs, processes, sessions, devices, commands, docs |
 | `https://<host>.ts.net:8444` | VS Code in the browser (code-server) |
 | `https://<host>.ts.net:10000` | Full desktop in the browser (Moonlight Web) |
+| `https://<host>.ts.net:8445` | Terminal in the browser (ttyd → your tmux sessions) |
 | `http://<host>:PORT` | A dev server started with `--host` / `-H 0.0.0.0` |
 | Moonlight app → `<host>` | Full desktop, lowest latency |
 | `ssh -t <user>@<host> t` | Pick a tmux session (same ones as on the laptop) |
@@ -35,6 +36,31 @@ Pair Moonlight (iPhone app) and Moonlight Web once via Sunshine's web UI at
 | `demo PORT` | Share `localhost:PORT` publicly over HTTPS until Ctrl+C |
 | `remote-off` / `remote-on` | Turn all remote access off (stays off) / back on |
 | `kitty-tmux` | kitty's shell: reattach to a free tmux session |
+
+## Web terminal
+
+`https://<host>.ts.net:8445` runs `t`, so it opens the same tmux sessions as kitty and SSH.
+
+- Font and colors match kitty (JetBrains Mono Nerd Font, served by the page).
+- **Images:** paste (Cmd+V) or drop an image; it is saved on the laptop and its path is
+  typed in. Claude Code attaches an image when you paste its path. Saved under
+  `~/.cache/web-paste/`, private, deleted after 7 days.
+- **Copy:** select with the mouse or tmux copy mode and it lands in your local clipboard
+  (OSC 52). Option+drag makes a plain browser selection.
+- Option works as Alt (tmux prefix `Option+A`).
+
+Over plain SSH from a Mac, add this to `~/.zshrc` to send a clipboard image:
+
+```bash
+limg() {  # send the clipboard image to the laptop; copies its path for Cmd+V
+  local f="/tmp/clip-$(date +%s).png"
+  osascript -e "set f to open for access POSIX file \"$f\" with write permission" \
+            -e 'write (the clipboard as «class PNGf») to f' -e 'close access f' || return
+  scp -q "$f" <user>@<host>:.cache/web-paste/ && rm "$f" &&
+  printf '/home/<user>/.cache/web-paste/%s' "$(basename "$f")" | pbcopy &&
+  echo "Image sent: Cmd+V pastes its path"
+}
+```
 
 ## How it fits together
 

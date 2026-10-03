@@ -17,7 +17,7 @@ fi
 sudo dnf copr enable -y lizardbyte/stable
 # Hybrid G14: the screen is drawn on the AMD iGPU, so Sunshine encodes there (VAAPI).
 # Fedora's Mesa omits H.264/HEVC encoding; RPM Fusion's freeworld build adds it.
-sudo dnf install -y tailscale Sunshine mesa-va-drivers-freeworld libva-utils jq remmina remmina-plugins-vnc
+sudo dnf install -y tailscale Sunshine mesa-va-drivers-freeworld libva-utils jq ttyd nodejs-npm python3-psutil remmina remmina-plugins-vnc
 
 step "2. code-server (VS Code in the browser)"
 if ! command -v code-server >/dev/null; then
@@ -38,6 +38,20 @@ if [[ ! -x "$SHARE/moonlight-web/package/web-server" ]]; then
   tar xzf mw.tar.gz && rm mw.tar.gz && chmod +x package/web-server package/streamer
   cd "$REPO_ROOT"
 fi
+
+step "3b. Web terminal: JetBrains Mono Nerd Font (also kitty's font) and page"
+fonts="$HOME/.local/share/fonts/JetBrainsMonoNerdFont"
+if [[ ! -f "$fonts/JetBrainsMonoNerdFontMono-Regular.ttf" ]]; then
+  rel=$(curl -fsSL https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest)
+  asset=$(jq -c '.assets[] | select(.name=="JetBrainsMono.tar.xz")' <<<"$rel")
+  tmp=$(mktemp -d); curl -fsSL -o "$tmp/jbm.tar.xz" "$(jq -r .browser_download_url <<<"$asset")"
+  echo "$(jq -r '.digest | sub("^sha256:";"")' <<<"$asset")  $tmp/jbm.tar.xz" | sha256sum -c -
+  mkdir -p "$fonts" && tar xJf "$tmp/jbm.tar.xz" -C "$fonts" --wildcards '*.ttf' && rm -rf "$tmp"
+  fc-cache -f "$fonts" >/dev/null
+fi
+mkdir -p "$SHARE/web-terminal/fonts"
+cp "$fonts"/JetBrainsMonoNerdFontMono-{Regular,Bold,Italic}.ttf "$SHARE/web-terminal/fonts/"
+"$SHARE/web-terminal/make-index.sh"
 
 step "4. Tailscale: on at boot, SSH on, $USER as operator"
 sudo systemctl enable --now tailscaled

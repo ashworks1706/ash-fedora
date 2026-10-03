@@ -39,8 +39,10 @@ declare -A FILES=(
   [home/.tmux.conf]="$HOME/.tmux.conf"
   [config/sunshine/sunshine.conf]="$XDG_CONFIG_HOME/sunshine/sunshine.conf"
   [config/sunshine/apps.json]="$XDG_CONFIG_HOME/sunshine/apps.json"
-  [share/dashboard/index.html]="$SHARE/dashboard/index.html"
   [share/dashboard-api/server.py]="$SHARE/dashboard-api/server.py"
+  [share/web-terminal/inject.html]="$SHARE/web-terminal/inject.html"
+  [share/web-terminal/make-index.sh]="$SHARE/web-terminal/make-index.sh"
+  [share/web-terminal/run.sh]="$SHARE/web-terminal/run.sh"
 )
 for unit in "$REPO_ROOT"/config/systemd/user/*.service; do
   FILES[config/systemd/user/$(basename "$unit")]="$XDG_CONFIG_HOME/systemd/user/$(basename "$unit")"
@@ -64,7 +66,8 @@ rsync -a "$REPO_ROOT/config/quickshell/" "$XDG_CONFIG_HOME/quickshell/"
 mkdir -p "$XDG_CONFIG_HOME/illogical-impulse"
 install -m 0644 "$REPO_ROOT/config/illogical-impulse/config.json" "$XDG_CONFIG_HOME/illogical-impulse/config.json"
 for rel in "${!FILES[@]}"; do
-  install -D -m 0644 "$REPO_ROOT/$rel" "${FILES[$rel]}"
+  mode=0644; [[ "$rel" == *.sh ]] && mode=0755
+  install -D -m "$mode" "$REPO_ROOT/$rel" "${FILES[$rel]}"
 done
 
 # code-server: never overwrite an existing config (it holds the password).
@@ -108,6 +111,13 @@ fi
 
 mkdir -p "$XDG_CONFIG_HOME/quickshell/ii/secrets"
 chmod 700 "$XDG_CONFIG_HOME/quickshell/ii/secrets"
+
+if command -v npm >/dev/null; then
+  echo "  building the dashboard (dashboard/)"
+  "$REPO_ROOT/scripts/build-dashboard.sh" >/dev/null
+else
+  echo "  npm not found: skipped the dashboard (scripts/build-dashboard.sh later)"
+fi
 
 echo "[5/5] Reloading user services"
 systemctl --user daemon-reload 2>/dev/null || true
