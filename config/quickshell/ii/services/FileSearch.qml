@@ -286,6 +286,7 @@ Singleton {
         const hasOtherPrefix = [
             prefixes.action,
             prefixes.app,
+            prefixes.calendar,
             prefixes.clipboard,
             prefixes.emojis,
             prefixes.math,
@@ -444,6 +445,29 @@ Singleton {
             entries = [];
             pathMtimes = {};
             handleCacheReady();
+        }
+    }
+
+    // Explicit maintenance hook. The index remains fully persistent and no
+    // background watcher is introduced; callers opt in to a rebuild.
+    IpcHandler {
+        target: "fileSearch"
+
+        function refresh(): string {
+            if (root.indexing || pathMtimeProc.running)
+                return "File index refresh is already running";
+            root.refresh(true);
+            return "File index refresh started";
+        }
+
+        function status(): string {
+            return JSON.stringify({
+                enabled: root.enabled,
+                ready: root.ready,
+                indexing: root.indexing,
+                entries: root.entries.length,
+                cachePath: root.cachePath
+            });
         }
     }
 

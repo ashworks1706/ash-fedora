@@ -1,0 +1,6 @@
+#!/bin/bash
+for b in /sys/class/backlight/*/brightness; do
+  [ -e "$b" ] || continue
+  chgrp video "$b"
+  chmod g+w "$b"
+done

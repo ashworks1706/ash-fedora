@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Attach to a laptop tmux session. Used from the Mac: ssh -t ash@ash-fedora t
+#   t          pick from running sessions (or start one if none)
+#   t NAME     attach to NAME, creating it if needed
+# Server runs under systemd (tmux.service) so it survives SSH disconnects
+tmux has-session 2>/dev/null || systemctl --user start tmux.service
+
+if [ -n "${1:-}" ]; then
+  exec tmux new-session -A -s "$1"
+elif tmux has-session 2>/dev/null; then
+  exec tmux attach \; choose-tree -Zs
+else
+  exec tmux new-session -s remote
+fi

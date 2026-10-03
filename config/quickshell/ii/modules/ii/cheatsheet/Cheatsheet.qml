@@ -21,6 +21,10 @@ Scope { // Scope
             "icon": "experiment",
             "name": Translation.tr("Elements")
         },
+        {
+            "icon": "monitoring",
+            "name": Translation.tr("Performance")
+        },
     ]
 
     Loader {
@@ -162,6 +166,9 @@ Scope { // Scope
 
                         CheatsheetKeybinds {}
                         CheatsheetPeriodicTable {}
+                        PerformanceTerminalDashboard {
+                            active: cheatsheetRoot.visible && swipeView.currentIndex === 2
+                        }
                     }
                 }
             }

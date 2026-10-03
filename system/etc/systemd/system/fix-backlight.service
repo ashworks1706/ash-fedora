@@ -1,0 +1,11 @@
+[Unit]
+Description=Fix backlight permissions for the active backlight device
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/fix-backlight-permissions
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

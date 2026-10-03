@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# kitty's shell. tmux sessions outlive kitty windows: each new window reattaches
+# to the most recently used session that no window is showing, else starts one.
+# The server itself runs as tmux.service (starts at boot, restores saved
+# sessions via tmux-continuum).
+command -v tmux >/dev/null || exec /usr/bin/fish
+
+# Server runs under systemd (tmux.service) so it survives kitty/SSH logouts
+tmux has-session 2>/dev/null || systemctl --user start tmux.service
+
+free=$(tmux list-sessions -F '#{session_attached} #{session_activity} #{session_name}' 2>/dev/null \
+  | awk '$1 == 0' | sort -k2,2nr | head -1 | cut -d' ' -f3-)
+if [ -n "$free" ]; then
+  exec tmux attach -t "$free"
+else
+  exec tmux new-session
+fi

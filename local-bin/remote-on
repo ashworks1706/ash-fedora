@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# remote-on — restore remote access: Tailscale, the dashboard, VS Code, Desktop,
+# Sunshine and Taildrop. --dry-run prints the steps without running them.
+set -u
+DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
+run() { echo "+ $*"; [ $DRY = 1 ] || "$@"; }
+HOSTNAME_TS=https://__TS_HOST__
+
+run rm -f "$HOME/.config/remote-off"
+run sudo systemctl enable --now tailscaled
+[ $DRY = 1 ] || sleep 2
+run tailscale up
+run systemctl --user enable --now code-server moonlight-web dashboard-api taildrop-receive
+run tailscale serve --bg --https=443 "$HOME/.local/share/dashboard"
+run tailscale serve --bg --https=443 --set-path /api http://127.0.0.1:8095
+run tailscale serve --bg --https=8444 http://127.0.0.1:8080
+run tailscale serve --bg --https=10000 http://127.0.0.1:8090
+if ! pgrep -x sunshine >/dev/null; then
+  sig=$(ls -t "/run/user/$UID/hypr/" 2>/dev/null | head -1)
+  if [ -n "$sig" ]; then
+    run env HYPRLAND_INSTANCE_SIGNATURE="$sig" hyprctl dispatch exec sunshine
+  else
+    echo "Hyprland isn't running; Sunshine will start when you log in."
+  fi
+fi
+echo "Remote access is on: $HOSTNAME_TS"

@@ -8,14 +8,29 @@ Open, reproducible Hyprland + Quickshell setup for Fedora (ASUS G14-friendly bas
 - Quickshell config: `config/quickshell`
 - Illogical Impulse options: `config/illogical-impulse/config.json`
 - TTY launcher helper: `local-bin/start-hyprland`
+- Terminal: kitty (`config/kitty`), tmux (`home/.tmux.conf`) with sessions that survive
+  closing kitty, SSH disconnects and reboots
+- Remote access from a Mac/iPhone over Tailscale: VS Code and the full desktop in the
+  browser, Moonlight, a dashboard, public demo links. See [docs/REMOTE.md](docs/REMOTE.md)
+- System tweaks (`system/`): lid stays awake on AC, auto-login to a locked desktop,
+  backlight permissions
 - Maintenance scripts:
   - `scripts/doctor.sh`
-  - `scripts/install.sh`
+  - `scripts/install.sh`: user configs, units and scripts (no root)
+  - `scripts/install-system.sh`: system files (sudo)
+  - `scripts/setup-remote.sh`: remote-access packages and services (sudo)
+  - `scripts/sync-from-system.sh`: copy the live setup back into the repo
+  - `scripts/check-secrets.sh`: block credentials from being committed
   - `scripts/uninstall.sh`
 
 ## Safety defaults
 
 - Personal paths are templated with `__HOME__` and rendered during install.
+- Tailscale names, IP and login are templated (`__TS_HOST__`, `__TS_IP__`, `__TS_USER__`,
+  `__MAC_HOST__`) and filled in from `tailscale status` / `local.env` at install.
+- Credentials are never committed: code-server's password is generated per machine,
+  Sunshine pairings and Google Calendar tokens stay local, and `check-secrets.sh` runs
+  on every sync.
 - GitHub sidebar widget is disabled by default.
 - No API tokens are stored in this repo.
 - Token path (if you enable GitHub widget later):
@@ -24,8 +39,8 @@ Open, reproducible Hyprland + Quickshell setup for Fedora (ASUS G14-friendly bas
 ## Install
 
 ```bash
-git clone https://github.com/<you>/hypr-fedora-oss.git
-cd hypr-fedora-oss
+git clone https://github.com/ashworks1706/ash-fedora.git
+cd ash-fedora
 ./scripts/doctor.sh
 ./scripts/install.sh
 ```

@@ -1,0 +1,11 @@
+[Unit]
+Description=tmux server (shared by kitty windows and SSH logins)
+
+[Service]
+Type=forking
+ExecStart=%h/.local/bin/tmux-server-start
+ExecStop=/usr/bin/tmux kill-server
+Restart=no
+
+[Install]
+WantedBy=default.target

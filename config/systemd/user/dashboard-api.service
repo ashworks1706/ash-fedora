@@ -1,0 +1,10 @@
+[Unit]
+Description=ash-fedora dashboard control API (start/stop services; tailnet owner only)
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/share/dashboard-api/server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

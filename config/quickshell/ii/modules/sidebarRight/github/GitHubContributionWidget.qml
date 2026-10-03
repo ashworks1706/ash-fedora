@@ -17,7 +17,7 @@ Rectangle {
 
     property bool refreshing: false
     property string errorText: ""
-    property string username: Config.options.sidebar.github?.username ?? "your-github-username"
+    property string username: Config.options.sidebar.github?.username ?? "ashworks1706"
     property int requestedWeeks: Config.options.sidebar.github?.weeks ?? 26
     property string tokenFilePath: trimFileProtocol(Config.options.sidebar.github?.tokenFilePath ?? `${Directories.config}/quickshell/ii/secrets/github_token`)
     property string cachePath: trimFileProtocol(Config.options.sidebar.github?.cachePath ?? `${Directories.state}/user/github-contributions.json`)

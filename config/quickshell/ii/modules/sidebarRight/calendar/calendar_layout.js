@@ -74,7 +74,7 @@ function getCalendarLayout(dateObject, highlight) {
     // Fill
     var monthDiff = (weekdayOfMonthFirst == 0 ? 0 : -1);
     var toFill, dim;
-    if(weekdayOfMonthFirst == 0) {
+    if (weekdayOfMonthFirst == 0) {
         toFill = 1;
         dim = daysInMonth;
     }
@@ -85,11 +85,16 @@ function getCalendarLayout(dateObject, highlight) {
     var calendar = [...Array(6)].map(() => Array(7));
     var i = 0, j = 0;
     while (i < 6 && j < 7) {
+        const cellDate = new Date(year, (month - 1) + monthDiff, toFill);
+        const cellYear = cellDate.getFullYear();
+        const cellMonth = String(cellDate.getMonth() + 1).padStart(2, '0');
+        const cellDay = String(cellDate.getDate()).padStart(2, '0');
         calendar[i][j] = {
             "day": toFill,
+            "dateKey": `${cellYear}-${cellMonth}-${cellDay}`,
+            "inCurrentMonth": monthDiff == 0,
             "today": ((toFill == day && monthDiff == 0 && highlight) ? 1 : (
-                monthDiff == 0 ? 0 :
-                    -1
+                monthDiff == 0 ? 0 : -1
             ))
         };
         // Increment
@@ -112,4 +117,3 @@ function getCalendarLayout(dateObject, highlight) {
     }
     return calendar;
 }
-

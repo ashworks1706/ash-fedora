@@ -1,7 +1,7 @@
 #!/bin/bash
 # Decide suspend method based on power source:
 # - On battery: prefer suspend-then-hibernate (respects HibernateDelaySec)
-# - On AC: plain suspend
+# - On AC: don't suspend (remote access via Tailscale + Sunshine)
 
 set -euo pipefail
 
@@ -18,7 +18,8 @@ is_on_ac() {
 }
 
 if is_on_ac; then
-    exec systemctl suspend || exec loginctl suspend
+    # Stay awake on AC so the laptop remains reachable over Tailscale/Moonlight
+    exit 0
 else
     # Try suspend-then-hibernate so the kernel/logind handles the delay
     systemctl suspend-then-hibernate || systemctl suspend || loginctl suspend

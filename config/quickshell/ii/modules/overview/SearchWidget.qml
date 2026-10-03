@@ -54,6 +54,18 @@ Item { // Wrapper
             }
         },
         {
+            action: "refreshfiles",
+            execute: () => {
+                FileSearch.refresh(true);
+                Quickshell.execDetached([
+                    "notify-send",
+                    Translation.tr("File search"),
+                    Translation.tr("Refreshing the persistent file index"),
+                    "-a", "Shell"
+                ]);
+            }
+        },
+        {
             action: "superpaste",
             execute: args => {
                 if (!/^(\d+)/.test(args.trim())) { // Invalid if doesn't start with numbers
@@ -366,6 +378,30 @@ Item { // Wrapper
                                 };
                             }).filter(Boolean);
                         }
+                        else if (root.searchingText.startsWith(Config.options.search.prefix.calendar)) {
+                            const searchString = StringUtils.cleanPrefix(root.searchingText, Config.options.search.prefix.calendar);
+                            return CalendarSearch.fuzzyQuery(searchString).map(entry => {
+                                const date = new Date(`${entry.dateKey}T12:00:00`);
+                                const dateText = date.toLocaleDateString(Qt.locale(), "ddd, MMM d");
+                                const timeText = entry.allDay
+                                    ? (entry.itemType === "task" ? Translation.tr("Task") : Translation.tr("All day"))
+                                    : Qt.formatTime(new Date(entry.start), "h:mm AP");
+                                const itemKind = entry.itemType === "task" ? Translation.tr("Task") : Translation.tr("Event");
+                                return {
+                                    key: `calendar ${entry.itemType} ${entry.id}`,
+                                    name: entry.title,
+                                    clickActionName: Translation.tr("Open"),
+                                    type: `${itemKind}  •  ${dateText}  •  ${timeText}  •  ${entry.calendarName}`,
+                                    materialSymbol: entry.itemType === "task" ? "task_alt" : "event",
+                                    execute: () => {
+                                        const fallback = entry.itemType === "task"
+                                            ? "https://tasks.google.com/"
+                                            : "https://calendar.google.com/";
+                                        Qt.openUrlExternally(entry.link || fallback);
+                                    }
+                                };
+                            });
+                        }
 
                         ////////////////// Init ///////////////////
                         nonAppResultsTimer.restart();
@@ -399,7 +435,12 @@ Item { // Wrapper
                                 if (cleanedCommand.startsWith(Config.options.search.prefix.shellCommand)) {
                                     cleanedCommand = cleanedCommand.slice(Config.options.search.prefix.shellCommand.length);
                                 }
-                                Quickshell.execDetached(["bash", "-c", searchingText.startsWith('sudo') ? `${Config.options.apps.terminal} fish -C '${cleanedCommand}'` : cleanedCommand]);
+                                if (cleanedCommand.trim().startsWith("sudo")) {
+                                    const terminalCommand = Config.options.apps.terminal.trim().split(/\s+/);
+                                    Quickshell.execDetached(terminalCommand.concat(["-e", "fish", "-lc", cleanedCommand]));
+                                } else {
+                                    Quickshell.execDetached(["fish", "-lc", cleanedCommand]);
+                                }
                             }
                         };
                         const webSearchResultObject = {
@@ -523,6 +564,7 @@ Item { // Wrapper
                     query: StringUtils.cleanOnePrefix(root.searchingText, [
                         Config.options.search.prefix.action,
                         Config.options.search.prefix.app,
+                        Config.options.search.prefix.calendar,
                         Config.options.search.prefix.clipboard,
                         Config.options.search.prefix.emojis,
                         Config.options.search.prefix.math,

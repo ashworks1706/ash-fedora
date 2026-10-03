@@ -1,0 +1,19 @@
+[Unit]
+Description=Moonlight Web (browser client for Sunshine, tailnet only)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/.local/share/moonlight-web/package
+ExecStart=%h/.local/share/moonlight-web/package/web-server run
+# Web UI only on localhost; reached via `tailscale serve` on :10000
+Environment=BIND_ADDRESS=127.0.0.1:8090
+# Media goes straight over Tailscale: advertise only the tailnet IP
+Environment=WEBRTC_PORT_RANGE=40000:40100
+Environment=WEBRTC_NETWORK_TYPES=udp4
+Environment=WEBRTC_NAT_1TO1_HOST=__TS_IP__
+Environment=DISABLE_DEFAULT_WEBRTC_ICE_SERVERS=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

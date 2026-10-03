@@ -27,8 +27,14 @@ restore_latest() {
     rm -rf "$XDG_CONFIG_HOME/illogical-impulse"
     rsync -a "$latest/config/illogical-impulse/" "$XDG_CONFIG_HOME/illogical-impulse/"
   fi
-  if [[ -f "$latest/local-bin/start-hyprland/start-hyprland" ]]; then
-    install -m 0755 "$latest/local-bin/start-hyprland/start-hyprland" "$LOCAL_BIN/start-hyprland"
+  if [[ -d "$latest/local-bin" ]]; then
+    for bin in "$latest"/local-bin/*; do
+      [[ -f "$bin" ]] && install -m 0755 "$bin" "$LOCAL_BIN/$(basename "$bin")"
+    done
+  fi
+  # Single files (kitty, tmux, fish, systemd units, sunshine, dashboard), by path under $HOME
+  if [[ -d "$latest/files" ]]; then
+    rsync -a "$latest/files/" "$HOME/"
   fi
   echo "Restore completed."
 }

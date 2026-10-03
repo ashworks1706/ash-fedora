@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# The ALC285 card's index isn't stable at boot, and its mixer controls
+# appear a moment after the card does, so retry until everything applies.
+apply() {
+  local card
+  card=$(grep -l ALC285 /proc/asound/card*/codec#* 2>/dev/null | head -1 | sed -E 's|.*/card([0-9]+)/.*|\1|')
+  [ -n "$card" ] || return 1
+  amixer -q -c "$card" set Capture 16 &&
+  amixer -q -c "$card" set 'Internal Mic' cap off &&
+  amixer -q -c "$card" set 'Internal Mic 1' cap on &&
+  amixer -q -c "$card" set 'Internal Mic Boost' 0
+}
+for _ in $(seq 1 30); do
+  apply 2>/dev/null && exit 0
+  sleep 1
+done
+apply

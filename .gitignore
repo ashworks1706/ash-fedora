@@ -13,3 +13,19 @@ cache/
 *.swo
 *~
 .DS_Store
+
+# Machine-local values and secret lists (see scripts/check-secrets.sh)
+local.env
+local.secrets
+
+# Never commit credentials
+config/illogical-impulse/google-calendar/
+**/token.json
+**/credentials.json
+**/client_secret*.json
+config/sunshine/sunshine_state.json
+config/code-server/config.yaml
+
+# Python caches
+__pycache__/
+*.pyc

@@ -28,11 +28,11 @@ Scope {
 
             WlrLayershell.namespace: "quickshell:overview"
             WlrLayershell.layer: WlrLayer.Overlay
-            // WlrLayershell.keyboardFocus: GlobalStates.overviewOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: (GlobalStates.overviewOpen && root.monitorIsFocused) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             color: "transparent"
 
             mask: Region {
-                item: GlobalStates.overviewOpen ? columnLayout : null
+                item: GlobalStates.overviewOpen ? dismissLayer : null
             }
 
             anchors {
@@ -40,17 +40,6 @@ Scope {
                 bottom: true
                 left: true
                 right: true
-            }
-
-            HyprlandFocusGrab {
-                id: grab
-                windows: [root]
-                property bool canBeActive: root.monitorIsFocused
-                active: false
-                onCleared: () => {
-                    if (!active)
-                        GlobalStates.overviewOpen = false;
-                }
             }
 
             Connections {
@@ -63,19 +52,18 @@ Scope {
                         if (!overviewScope.dontAutoCancelSearch) {
                             searchWidget.cancelSearch();
                         }
-                        delayedGrabTimer.start();
+                        Qt.callLater(() => searchWidget.focusSearchInput());
                     }
                 }
             }
 
-            Timer {
-                id: delayedGrabTimer
-                interval: Config.options.hacks.arbitraryRaceConditionDelay
-                repeat: false
-                onTriggered: {
-                    if (!grab.canBeActive)
-                        return;
-                    grab.active = GlobalStates.overviewOpen;
+            Item {
+                id: dismissLayer
+                anchors.fill: parent
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: GlobalStates.overviewOpen = false
                 }
             }
 

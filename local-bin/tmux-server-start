@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Start the tmux server (run by tmux.service, so it outlives kitty and SSH logins).
+# tmux-continuum restores saved sessions when the server starts; give it a moment,
+# then drop the bootstrap session if anything was restored.
+tmux has-session 2>/dev/null && exit 0
+tmux new-session -d -s _boot
+for _ in $(seq 1 20); do
+  tmux list-sessions -F '#S' 2>/dev/null | grep -qvx _boot && break
+  sleep 0.25
+done
+if tmux list-sessions -F '#S' 2>/dev/null | grep -qvx _boot; then
+  tmux kill-session -t _boot
+else
+  tmux rename-session -t _boot main
+fi

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# demo PORT — share http://localhost:PORT publicly over HTTPS via Tailscale Funnel.
+# Runs in the foreground: the public link exists only until you press Ctrl+C.
+# Uses port 8443 so it never touches code-server on 443 (tailnet only).
+port="${1:?usage: demo PORT   (e.g. demo 3000)}"
+if ! curl -s -o /dev/null -m 2 "http://127.0.0.1:$port"; then
+  echo "Nothing is answering on localhost:$port yet; start your dev server first." >&2
+  exit 1
+fi
+url="https://$(tailscale status --json | jq -r '.Self.DNSName' | sed 's/\.$//'):8443"
+echo "Public link: $url"
+printf "%s" "$url" | wl-copy 2>/dev/null && echo "(copied to clipboard)"
+echo "Anyone with the link can open it. Ctrl+C to stop sharing."
+exec tailscale funnel --https=8443 "http://127.0.0.1:$port"

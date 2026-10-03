@@ -137,7 +137,7 @@ Singleton {
 
             property JsonObject apps: JsonObject {
                 property string bluetooth: "kcmshell6 kcm_bluetooth"
-                property string network: "kitty -1 fish -c nmtui"
+                property string network: "kitty -1 nmtui"
                 property string networkEthernet: "kcmshell6 kcm_networkmanagement"
                 property string taskManager: "plasma-systemmonitor --page-name Processes"
                 property string terminal: "kitty -1" // This is only for shell actions
@@ -398,6 +398,7 @@ Singleton {
                     property string action: "/"
                     property string app: ">"
                     property string clipboard: ";"
+                    property string calendar: "@"
                     property string emojis: ":"
                     property string files: "~"
                     property string math: "="
@@ -474,7 +475,7 @@ Singleton {
                 }
                 property JsonObject github: JsonObject {
                     property bool enable: true
-                    property string username: "your-github-username"
+                    property string username: "ashworks1706"
                     property int weeks: 26
                     property string tokenFilePath: `${Directories.config}/quickshell/ii/secrets/github_token`
                     property string cachePath: `${Directories.state}/user/github-contributions.json`
