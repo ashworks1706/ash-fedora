@@ -1,0 +1,108 @@
+# llama-swap: one OpenAI-compatible endpoint for every local model.
+#   http://127.0.0.1:8100/v1   (tailnet: https://<host>.ts.net:8100)
+# Requests pick a model by name; llama-swap starts the matching llama-server,
+# swaps chat models in and out of the 6 GB GPU, and unloads them when idle.
+# Auth: Authorization: Bearer $LLM_API_KEY (from ~/.config/llm/env).
+
+healthCheckTimeout: 180
+logLevel: warn
+startPort: 10100
+sendLoadingState: true
+includeAliasesInList: false
+
+# llama-swap's GPU monitor runs nvidia-smi every 15 s, which keeps a hybrid laptop's
+# NVIDIA GPU from ever sleeping. The dashboard shows GPU stats instead (only while open).
+performance:
+  disabled: true
+
+apiKeys:
+  - "${env.LLM_API_KEY}"
+
+macros:
+  server: "${env.HOME}/.local/share/llm/llama.cpp/llama-server --host 127.0.0.1 --port ${PORT} --metrics"
+  models: "${env.HOME}/.local/share/llm/models"
+  # chat on the RTX 4050; jinja templates enable tool calling and thinking control
+  gpu: "-ngl 99 -fa on --jinja"
+  # embeddings on the CPU so they never take VRAM from chat
+  cpu: "-ngl 0 --embedding"
+
+models:
+  qwen3.5-4b:
+    name: "Qwen 3.5 4B"
+    # 2 slots x 64K context (Hermes needs >= 64K). Fits 6 GB with an 8-bit KV cache
+    # and the vision projector on the CPU.
+    description: "Default chat model with vision and tools, 64K context (GPU, ~50 tok/s)"
+    cmd: |
+      ${server} ${gpu} -m ${models}/Qwen3.5-4B-Q4_K_M.gguf
+      --mmproj ${models}/Qwen3.5-4B-mmproj-F16.gguf --no-mmproj-offload
+      -c 131072 -np 2 -ctk q8_0 -ctv q8_0
+    # names the projects and Hermes already use
+    aliases:
+      - "qwen3.5:4b"
+      - "qwen3-vl:4b"
+      - "Qwen/Qwen3-4B-GGUF:Q4_K_M"
+      - "qwen"
+      - "default"
+    ttl: 600
+    capabilities:
+      in: [text, image]
+      out: [text]
+
+  qwen2.5-7b-instruct:
+    name: "Qwen 2.5 7B Instruct"
+    description: "Older 7B instruct model (GPU, ~34 tok/s)"
+    cmd: |
+      ${server} ${gpu} -m ${models}/qwen2.5-7b-instruct.gguf -c 16384 -np 1
+    aliases:
+      - "qwen2.5:7b-instruct"
+    ttl: 600
+
+  qwen2.5-coder-1.5b-base:
+    name: "Qwen 2.5 Coder 1.5B (base)"
+    description: "Code completion / fill-in-the-middle"
+    cmd: |
+      ${server} ${gpu} -m ${models}/qwen2.5-coder-1.5b-base.gguf -c 8192 -np 1
+    aliases:
+      - "qwen2.5-coder:1.5b-base"
+    ttl: 600
+
+  qwen3-embedding-0.6b:
+    name: "Qwen3 Embedding 0.6B"
+    description: "1024-dim embeddings (CPU)"
+    env:
+      - "CUDA_VISIBLE_DEVICES="
+    cmd: |
+      ${server} ${cpu} --pooling last -m ${models}/Qwen3-Embedding-0.6B-Q8_0.gguf
+      -c 8192 -b 8192 -ub 8192 -np 2
+    aliases:
+      - "Qwen/Qwen3-Embedding-0.6B-GGUF:Q8_0"
+      - "qwen3-embedding"
+      - "embed"
+    ttl: 900
+
+  nomic-embed-text:
+    name: "nomic-embed-text v1.5"
+    description: "768-dim embeddings (CPU)"
+    env:
+      - "CUDA_VISIBLE_DEVICES="
+    cmd: |
+      ${server} ${cpu} -m ${models}/nomic-embed-text-v1.5.gguf -c 8192 -b 8192 -ub 8192 -np 2
+    aliases:
+      - "nomic-embed-text:latest"
+    ttl: 900
+
+routing:
+  router:
+    use: group
+    settings:
+      groups:
+        # one chat model on the GPU at a time
+        chat:
+          swap: true
+          exclusive: false
+          members: [qwen3.5-4b, qwen2.5-7b-instruct, qwen2.5-coder-1.5b-base]
+        # embedding models run alongside chat, on the CPU
+        embed:
+          swap: false
+          exclusive: false
+          members: [qwen3-embedding-0.6b, nomic-embed-text]

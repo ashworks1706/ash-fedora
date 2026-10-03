@@ -43,6 +43,8 @@ export type Point = {
   dgpu: number | null;
   temp_cpu: number | null;
   temp_gpu: number | null;
+  gen_tps: number | null;
+  pp_tps: number | null;
 };
 
 export type Nvidia = {

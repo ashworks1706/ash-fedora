@@ -200,3 +200,5 @@ section { padding: 18px 0; }
 footer { color: var(--faint); font-size: 12px; padding: 28px 0 40px; border-top: 1px solid var(--line); margin-top: 24px; }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: space-between; }
 .skeleton { color: var(--faint); }
+
+.meta { color: var(--muted); font-size: 12px; }

@@ -67,7 +67,7 @@ if command -v tailscale >/dev/null 2>&1; then
   state="$(tailscale status --json 2>/dev/null | jq -r .BackendState 2>/dev/null)"
   [[ "$state" == "Running" ]] && ok "Tailscale running" || warn "Tailscale is ${state:-not running} (remote-on)"
   [[ -e "$HOME/.config/remote-off" ]] && echo "[info] remote-off is active (remote-on to restore)"
-  for unit in tmux dashboard-api web-terminal taildrop-receive code-server moonlight-web; do
+  for unit in tmux dashboard-api web-terminal taildrop-receive code-server moonlight-web llama-swap; do
     if systemctl --user is-active --quiet "$unit"; then
       ok "$unit"
     elif systemctl --user is-enabled --quiet "$unit" 2>/dev/null; then

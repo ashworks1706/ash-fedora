@@ -15,6 +15,8 @@ import socket
 import subprocess
 import threading
 import time
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import psutil
@@ -106,6 +108,10 @@ SERVICES = {
                  "desc": "Full Hyprland desktop in the browser (Moonlight Web)"},
     "terminal": {**unit("web-terminal.service"), "name": "Terminal", "port": 8445, "local": 7681,
                  "desc": "Shell in the browser, attached to your tmux sessions"},
+    "models":   {**unit("llama-swap.service"), "name": "Model server", "port": 8100, "local": 8100,
+                 "desc": "llama-swap: one OpenAI-compatible endpoint for every local model"},
+    "hermes":   {**unit("hermes-gateway.service"), "name": "Hermes", "port": None, "local": None,
+                 "desc": "Hermes agent (Discord bot); local fallback runs on the model server"},
     "sunshine": {"status": sunshine_active, "act": sunshine_action, "name": "Sunshine",
                  "port": None, "local": 47989,
                  "desc": "Streams the screen to Moonlight apps and Desktop (AMD VAAPI)"},
@@ -206,6 +212,7 @@ def sampler():
                     "mem_used": int(read(f"{AMD}/mem_info_vram_used", "0")) / 2**20,
                     "mem_total": int(read(f"{AMD}/mem_info_vram_total", "0")) / 2**20}
         _nvidia = sample_nvidia()
+        gen_tps, pp_tps = ai_rates() if watched else (None, None)
 
         # Process table (htop-like), only while someone is looking: scanning every
         # process is the sampler's main cost. CPU% needs two readings per process.
@@ -229,6 +236,7 @@ def sampler():
             "disk_r": round(rd), "disk_w": round(wr),
             "igpu": igpu["util"] if igpu else None, "dgpu": _nvidia.get("util"),
             "temp_cpu": temps.get("k10temp"), "temp_gpu": temps.get("amdgpu"),
+            "gen_tps": gen_tps, "pp_tps": pp_tps,
         }
         with _lock:
             _history.append(point)
@@ -292,6 +300,158 @@ def info():
     }
 
 
+# ---------------------------------------------------------------- AI (llama-swap)
+
+LLM_URL = os.environ.get("LLM_URL", "http://127.0.0.1:8100")      # llama-swap
+
+
+def env_value(path, key):
+    """Read KEY=value from an env file (keys stay server-side, never sent to the browser)."""
+    for line in read(os.path.expanduser(path)).splitlines():
+        if line.startswith(key + "="):
+            return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
+def llm_key():
+    return env_value("~/.config/llm/env", "LLM_API_KEY")
+
+
+def upstream(url, key, data=None, timeout=10):
+    req = urllib.request.Request(url, data=data, method="POST" if data is not None else "GET")
+    req.add_header("Authorization", f"Bearer {key}")
+    if data is not None:
+        req.add_header("Content-Type", "application/json")
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def ai_models():
+    """Local models from llama-swap, and which are loaded."""
+    out = {"models": [], "running": [], "llm": False}
+    try:
+        with upstream(f"{LLM_URL}/v1/models", llm_key()) as r:
+            out["models"] = [{"id": m["id"], "name": m.get("name") or m["id"],
+                              "description": m.get("description", ""), "kind": "local"}
+                             for m in json.load(r).get("data", [])]
+        out["llm"] = True
+        with upstream(f"{LLM_URL}/running", llm_key()) as r:
+            out["running"] = [m.get("model") for m in json.load(r).get("running", [])
+                              if m.get("state") in ("ready", "starting")]
+    except (urllib.error.URLError, OSError, ValueError, KeyError):
+        pass
+    return out
+
+
+def llm_json(path, timeout=5):
+    with upstream(f"{LLM_URL}{path}", llm_key(), timeout=timeout) as r:
+        return json.load(r)
+
+
+# llama-server Prometheus counters (enabled with --metrics) -> short names
+METRICS = {
+    "llamacpp:prompt_tokens_total": "prompt_tokens",
+    "llamacpp:prompt_seconds_total": "prompt_seconds",
+    "llamacpp:tokens_predicted_total": "gen_tokens",
+    "llamacpp:tokens_predicted_seconds_total": "gen_seconds",
+    "llamacpp:n_decode_total": "decodes",
+    "llamacpp:requests_processing": "processing",
+    "llamacpp:requests_deferred": "deferred",
+}
+
+
+def model_metrics(model_id):
+    out = {}
+    with upstream(f"{LLM_URL}/upstream/{model_id}/metrics", llm_key(), timeout=3) as r:
+        for line in r.read().decode().splitlines():
+            if line and not line.startswith("#"):
+                name, _, value = line.partition(" ")
+                if name in METRICS:
+                    out[METRICS[name]] = float(value)
+    return out
+
+
+def running_models():
+    try:
+        return [m for m in llm_json("/running", 3).get("running", []) if m.get("state") == "ready"]
+    except (urllib.error.URLError, OSError, ValueError):
+        return []
+
+
+_ai_prev = {}  # model -> (time, gen_tokens, prompt_tokens) for live rates
+
+
+def ai_rates():
+    """Tokens per second across loaded models since the last call (sampler, while watched)."""
+    now, gen, pp = time.time(), 0.0, 0.0
+    for m in running_models():
+        mid = m["model"]
+        try:
+            c = model_metrics(mid)
+            slots = llm_json(f"/upstream/{mid}/slots", 3)
+        except (urllib.error.URLError, OSError, ValueError):
+            continue
+        # Counters only grow when a request finishes; add in-progress tokens from the
+        # slots so long replies show up live. A finished request moves from one to the
+        # other, so the total stays continuous.
+        busy = [x for x in slots if x.get("is_processing")]
+        gen_total = c.get("gen_tokens", 0) + sum((x.get("next_token") or [{}])[0].get("n_decoded", 0) for x in busy)
+        pp_total = c.get("prompt_tokens", 0) + sum(x.get("n_prompt_tokens_processed", 0) for x in busy)
+        prev = _ai_prev.get(mid)
+        _ai_prev[mid] = (now, gen_total, pp_total)
+        if prev and now > prev[0]:
+            gen += max(0, gen_total - prev[1]) / (now - prev[0])
+            pp += max(0, pp_total - prev[2]) / (now - prev[0])
+    return round(gen, 1), round(pp, 1)
+
+
+def ai_status():
+    """Models, which are loaded, and per-loaded-model details and inference stats."""
+    out = ai_models()
+    details = []
+    for m in running_models():
+        mid = m["model"]
+        d = {"id": mid, "slots": [], "ctx_per_slot": None, "busy": 0}
+        try:
+            slots = llm_json(f"/upstream/{mid}/slots", 3)
+            d["slots"] = [{"id": x.get("id"), "processing": x.get("is_processing", False)} for x in slots]
+            d["ctx_per_slot"] = slots[0].get("n_ctx") if slots else None
+            d["busy"] = sum(1 for x in slots if x.get("is_processing"))
+        except (urllib.error.URLError, OSError, ValueError, IndexError):
+            pass
+        try:
+            props = llm_json(f"/upstream/{mid}/props", 3)
+            d["file"] = os.path.basename(props.get("model_path", ""))
+            d["modalities"] = [k for k, v in (props.get("modalities") or {}).items() if v]
+            d["build"] = props.get("build_info", "")
+        except (urllib.error.URLError, OSError, ValueError):
+            pass
+        try:
+            c = model_metrics(mid)
+            d["stats"] = {
+                "gen_tokens": int(c.get("gen_tokens", 0)),
+                "prompt_tokens": int(c.get("prompt_tokens", 0)),
+                "gen_tps": round(c["gen_tokens"] / c["gen_seconds"], 1) if c.get("gen_seconds") else None,
+                "prompt_tps": round(c["prompt_tokens"] / c["prompt_seconds"], 1) if c.get("prompt_seconds") else None,
+                "processing": int(c.get("processing", 0)),
+                "deferred": int(c.get("deferred", 0)),
+            }
+        except (urllib.error.URLError, OSError, ValueError):
+            pass
+        cmd = m.get("cmd", "")
+        d["gpu"] = "-ngl 0" not in cmd
+        details.append(d)
+    out["loaded"] = details
+    return out
+
+
+def ai_load(model_id):
+    """Start a model by touching its upstream (llama-swap loads on first request)."""
+    if model_id not in {m["id"] for m in ai_models()["models"]}:
+        return False
+    with upstream(f"{LLM_URL}/upstream/{model_id}/health", llm_key(), timeout=240):
+        return True
+
+
 # ---------------------------------------------------------------- HTTP
 
 class Handler(BaseHTTPRequestHandler):
@@ -320,6 +480,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {k: v["status"]() for k, v in SERVICES.items()})
         if route == "/info":
             return self._send(200, info())
+        if route == "/ai/models":
+            return self._send(200, ai_models())
+        if route == "/ai/status":
+            return self._send(200, ai_status())
         if route == "/metrics":
             if time.time() - _last_view >= WATCH_WINDOW:
                 _wake.set()  # was idle: sample at full speed from now on
@@ -336,6 +500,17 @@ class Handler(BaseHTTPRequestHandler):
         route = self._route()
         if route == "/paste-image":
             return self._paste_image()
+        if route.startswith("/ai/load/"):
+            try:
+                return self._send(200 if ai_load(route[len("/ai/load/"):]) else 404, {"ok": True})
+            except (urllib.error.URLError, OSError) as e:
+                return self._send(502, {"error": str(e)})
+        if route == "/ai/unload":
+            try:
+                with upstream(f"{LLM_URL}/unload", llm_key()):
+                    return self._send(200, {"ok": True})
+            except (urllib.error.URLError, OSError) as e:
+                return self._send(502, {"error": str(e)})
         parts = [p for p in route.split("/") if p]
         if len(parts) != 2 or parts[0] not in SERVICES or parts[1] not in ("start", "stop"):
             return self._send(404, {"error": "not found"})

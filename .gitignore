@@ -29,3 +29,6 @@ config/code-server/config.yaml
 # Python caches
 __pycache__/
 *.pyc
+
+# Local AI API key
+config/llm/env

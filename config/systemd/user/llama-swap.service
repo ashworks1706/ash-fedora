@@ -1,0 +1,14 @@
+[Unit]
+Description=llama-swap: one OpenAI-compatible endpoint for local models (llama.cpp)
+After=network-online.target
+
+[Service]
+EnvironmentFile=%h/.config/llm/env
+Environment=LD_LIBRARY_PATH=%h/.local/share/llm/llama.cpp
+ExecStart=%h/.local/share/llm/bin/llama-swap -config %h/.config/llm/llama-swap.yaml -listen 127.0.0.1:8100 -watch-config
+Restart=on-failure
+RestartSec=5
+# The proxy itself is tiny; model processes it starts inherit normal priority.
+
+[Install]
+WantedBy=default.target

@@ -15,6 +15,7 @@ remote-access packages are separate, opt-in steps.
 | **Desktop** | Hyprland + [Quickshell `ii`](config/quickshell) bar and widgets, cheatsheet on `Super+/`, custom keybinds |
 | **Terminal** | kitty + tmux: every window is a tmux session that survives closing kitty, SSH drops and reboots |
 | **Remote access** | Over Tailscale, from anywhere: VS Code, a terminal and the full desktop **in the browser**, Moonlight streaming, SSH, file sending, public demo links. [Guide](docs/REMOTE.md) |
+| **Local AI** | One OpenAI-compatible endpoint (llama-swap + llama.cpp with CUDA) for chat, your projects and Hermes; models swap and unload automatically. [Guide](docs/AI.md) |
 | **Dashboard** | A Next.js home page for the machine: services with start/stop, live CPU/GPU/memory/network/thermal graphs, processes, sessions, devices. [Details](dashboard/README.md) |
 | **Laptop tweaks** | Lid closed on AC stays awake, auto-login to a locked desktop, backlight fix, journal cap |
 | **Tooling** | Installer with backups and rollback, health check, one-command sync back into this repo with secret scanning |
@@ -32,6 +33,7 @@ Optional:
 
 ```bash
 ./scripts/setup-remote.sh      # remote access: Tailscale, Sunshine, code-server, dashboard (sudo)
+./scripts/setup-ai.sh          # local AI server: llama.cpp (CUDA) + llama-swap + models
 ./scripts/install-system.sh    # laptop tweaks (sudo; --no-autologin to skip auto-login)
 ```
 
@@ -48,7 +50,8 @@ config/              → ~/.config
   quickshell/          Quickshell "ii" shell (bar, sidebars, cheatsheet, lock screen)
   illogical-impulse/   ii options (config.json only; credentials stay local)
   kitty/  fish/        terminal and login-shell snippets
-  systemd/user/        user services: tmux, dashboard API, web terminal, Moonlight Web, Taildrop
+  systemd/user/        user services: tmux, dashboard API, web terminal, Moonlight Web, Taildrop, llama-swap
+  llm/                 llama-swap model config (API key stays in ~/.config/llm/env)
   sunshine/            stream host settings (AMD VAAPI encoder)
   code-server/         config template (password generated per machine)
 home/.tmux.conf      → ~/.tmux.conf
@@ -65,6 +68,7 @@ docs/                  guides
 | Doc | For |
 |---|---|
 | [docs/REMOTE.md](docs/REMOTE.md) | Remote access: addresses, commands, how the pieces fit, performance |
+| [docs/AI.md](docs/AI.md) | Local AI server: models, endpoint, pointing projects and Hermes at it |
 | [dashboard/README.md](dashboard/README.md) | Dashboard: build, develop, API reference |
 | [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | Packages each part needs |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Known problems and fixes |

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Chart } from "./Chart";
 import { fmt, serviceAction, type Info, type Metrics, type Now, type Point, type Service } from "@/lib/api";
 
@@ -35,7 +35,7 @@ function ServiceCard({ s, onChange }: { s: Service; onChange: () => void }) {
         <span className="card-title"><span className={`dot ${s.active ? live : ""}`} />{s.name}</span>
         {s.public ? <span className="badge public">public</span>
           : s.port ? <span className="badge mono">:{s.port}</span>
-          : <span className="badge">Moonlight app</span>}
+          : <span className="badge">{s.id === "sunshine" ? "Moonlight app" : "background"}</span>}
       </div>
       <div className="card-desc">{s.desc}</div>
       <div className="card-foot">
@@ -188,6 +188,139 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
           <Legend items={[[`Read ${fmt.rate(now.disk_r ?? 0)}`, "var(--c3)"],
                           [`Write ${fmt.rate(now.disk_w ?? 0)}`, "var(--c4)"]]} />
         </MetricCard>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ AI */
+
+type Loaded = {
+  id: string; file?: string; ctx_per_slot: number | null; busy: number; gpu: boolean;
+  slots: { id: number; processing: boolean }[]; modalities?: string[];
+  stats?: { gen_tokens: number; prompt_tokens: number; gen_tps: number | null; prompt_tps: number | null; deferred: number };
+};
+type AIState = {
+  models: { id: string; name: string; description: string; kind: string }[];
+  running: string[]; llm: boolean; loaded: Loaded[];
+};
+
+const post = (path: string) => fetch(path, { method: "POST", headers: { "X-Dashboard": "1" } });
+
+export function AI({ info, m }: { info: Info | null; m: Metrics | null }) {
+  const [state, setState] = useState<AIState | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const refresh = async () => {
+    try { const r = await fetch("/api/ai/status", { cache: "no-store" }); if (r.ok) setState(await r.json()); } catch {}
+  };
+  useEffect(() => { refresh(); const t = setInterval(refresh, 3000); return () => clearInterval(t); }, []);
+  const act = async (key: string, path: string) => { setBusy(key); await post(path); setBusy(null); refresh(); };
+
+  const host = info?.tailscale.host ?? "<host>.ts.net";
+  const h = m?.history ?? [];
+  const times = h.map((p) => p.t);
+  const now = (m?.now ?? {}) as Partial<Now>;
+  const nv = now.nvidia;
+  const live = h.length ? h[h.length - 1] : null;
+  const loaded = state?.loaded ?? [];
+  const chat = loaded.find((l) => l.gpu);
+  const nameOf = (id: string) => state?.models.find((x) => x.id === id)?.name ?? id;
+
+  return (
+    <section>
+      <SectionHead id="ai" title="Local AI" hint="llama-swap + llama.cpp · one endpoint for chat, projects and Hermes" />
+      <div className="grid g-metrics">
+        <div className="card">
+          <div className="card-head">
+            <span className="card-desc">Inference</span>
+            <span className="badge mono">{chat ? `${chat.busy}/${chat.slots.length} slots busy` : "no chat model loaded"}</span>
+          </div>
+          <div className="metric-value mono">
+            {live?.gen_tps != null ? live.gen_tps.toFixed(0) : "0"}<small>tok/s generating</small>
+          </div>
+          <Chart times={times} series={[{ values: series(h, "gen_tps"), color: "var(--c3)", label: "Generate tok/s" },
+                                        { values: series(h, "pp_tps"), color: "var(--c2)", label: "Prompt tok/s" }]} />
+          <Legend items={[[`Generate ${live?.gen_tps ?? 0}/s`, "var(--c3)"], [`Prompt ${live?.pp_tps ?? 0}/s`, "var(--c2)"]]} />
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <span className="card-desc">Loaded model</span>
+            {chat && <span className="badge mono">{chat.modalities?.length ? ["text", ...chat.modalities].join(" · ") : "text"}</span>}
+          </div>
+          {chat ? (
+            <>
+              <div className="metric-value" style={{ fontSize: 20 }}>{nameOf(chat.id)}</div>
+              <div className="metric-row mono"><span>{chat.file}</span></div>
+              <div className="metric-row mono">
+                <span>context <b>{chat.slots.length} × {chat.ctx_per_slot ? `${Math.round(chat.ctx_per_slot / 1024)}K` : "–"}</b></span>
+                <span>slots <b>{chat.slots.map((s) => (s.processing ? "●" : "○")).join(" ")}</b></span>
+              </div>
+              <div className="metric-row mono">
+                <span>avg <b>{chat.stats?.gen_tps ?? "–"}</b> tok/s gen</span>
+                <span><b>{chat.stats?.prompt_tps ?? "–"}</b> tok/s prompt</span>
+              </div>
+              <div className="metric-row mono">
+                <span>served <b>{(chat.stats?.gen_tokens ?? 0).toLocaleString()}</b> out · <b>{(chat.stats?.prompt_tokens ?? 0).toLocaleString()}</b> in</span>
+              </div>
+            </>
+          ) : <div className="card-desc">Nothing on the GPU. A model loads on its first request, or press Load below.</div>}
+        </div>
+
+        <div className="card">
+          <div className="card-head"><span className="card-desc">NVIDIA GPU</span>
+            <span className="badge mono">{nv?.state === "suspended" ? "sleeping" : nv?.state ?? "–"}</span></div>
+          <div className="metric-value mono">
+            {nv?.util != null ? `${Math.round(nv.util)}%` : nv?.state === "suspended" ? "off" : "–"}<small>{nv?.name ?? "RTX 4050"}</small>
+          </div>
+          {nv?.mem_total ? (
+            <>
+              <div className="bar"><span style={{ width: `${(100 * (nv.mem_used ?? 0)) / nv.mem_total}%`, background: "var(--c3)" }} /></div>
+              <div className="metric-row mono">
+                <span>VRAM <b>{Math.round(nv.mem_used ?? 0)} / {Math.round(nv.mem_total)} MB</b></span>
+                <span><b>{nv.temp}°C</b> · <b>{nv.power ?? "–"} W</b></span>
+              </div>
+            </>
+          ) : <div className="card-desc">Asleep to save battery. Wakes when a chat model loads.</div>}
+        </div>
+      </div>
+
+      <div className="grid g-two" style={{ marginTop: 12 }}>
+        <div className="card flush">
+          <div className="list">
+            {(state?.models ?? []).map((x) => {
+              const on = state?.running.includes(x.id);
+              return (
+                <div className="list-row" key={x.id}>
+                  <span style={{ minWidth: 0 }}>
+                    <span className="mono"><span className={`dot ${on ? "ok" : ""}`} style={{ display: "inline-block", marginRight: 8 }} />{x.id}</span>
+                    <div className="meta" style={{ marginLeft: 16 }}>{x.description}</div>
+                  </span>
+                  {on ? <span className="badge">loaded</span>
+                    : <button className="btn" disabled={!!busy} onClick={() => act(x.id, `/api/ai/load/${x.id}`)}>{busy === x.id ? "Loading…" : "Load"}</button>}
+                </div>
+              );
+            })}
+            {!state?.llm && <div className="list-row meta">Model server offline: start it under Services</div>}
+            <div className="list-row">
+              <span className="meta">Chat models unload after 10 min idle · chat login: any name + API key</span>
+              <span className="btns">
+                <button className="btn danger" disabled={!state?.running.length || !!busy} onClick={() => act("unload", "/api/ai/unload")}>
+                  {busy === "unload" ? "…" : "Unload all"}</button>
+                <a className="btn" href={`https://${host}:8100/ui/`} target="_blank" rel="noreferrer">Logs</a>
+                <a className="btn primary" href={`https://${host}:8100/upstream/qwen3.5-4b/`} target="_blank" rel="noreferrer">Chat</a>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="term">
+          <div className="term-bar"><i /><i /><i /><span className="mono">use from any project</span></div>
+          <Cmd text="OPENAI_BASE_URL=http://127.0.0.1:8100/v1" note="on this laptop" />
+          <Cmd text={`OPENAI_BASE_URL=https://${host}:8100/v1`} note="other devices" />
+          <Cmd text="grep LLM_API_KEY ~/.config/llm/env" note="API key" />
+          <Cmd text="model: qwen3.5:4b  (embeddings: qwen3-embedding)" note="names" />
+          <Cmd text="hermes -m qwen" note="Hermes on the local model" />
+        </div>
       </div>
     </section>
   );

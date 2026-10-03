@@ -10,12 +10,13 @@ run rm -f "$HOME/.config/remote-off"
 run sudo systemctl enable --now tailscaled
 [ $DRY = 1 ] || sleep 2
 run tailscale up
-run systemctl --user enable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal
+run systemctl --user enable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal llama-swap
 run tailscale serve --bg --https=443 "$HOME/.local/share/dashboard"
 run tailscale serve --bg --https=443 --set-path /api http://127.0.0.1:8095
 run tailscale serve --bg --https=8444 http://127.0.0.1:8080
 run tailscale serve --bg --https=10000 http://127.0.0.1:8090
 run tailscale serve --bg --https=8445 http://127.0.0.1:7681
+run tailscale serve --bg --https=8100 http://127.0.0.1:8100
 run tailscale serve --bg --https=8445 --set-path /fonts "$HOME/.local/share/web-terminal/fonts"
 run tailscale serve --bg --https=8445 --set-path /api http://127.0.0.1:8095
 if ! pgrep -x sunshine >/dev/null; then

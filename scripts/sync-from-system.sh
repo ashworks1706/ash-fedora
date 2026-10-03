@@ -45,10 +45,11 @@ copy "$CFG/fish/conf.d/hyprland-autostart.fish" config/fish/conf.d/hyprland-auto
 copy "$HOME/.tmux.conf"                  home/.tmux.conf
 
 echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"
-for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal; do
+for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal llama-swap; do
   copy "$CFG/systemd/user/$unit.service" "config/systemd/user/$unit.service"
 done
 copy "$CFG/systemd/user/code-server.service.d/priority.conf" config/systemd/user/code-server.service.d/priority.conf
+copy "$CFG/llm/llama-swap.yaml"           config/llm/llama-swap.yaml      # not llm/env (API key)
 copy "$CFG/sunshine/sunshine.conf"       config/sunshine/sunshine.conf   # not sunshine_state.json (credentials, pairings)
 copy "$CFG/sunshine/apps.json"           config/sunshine/apps.json
 copy "$HOME/.local/share/dashboard-api/server.py" share/dashboard-api/server.py
