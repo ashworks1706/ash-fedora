@@ -94,6 +94,7 @@ function Legend({ items }: { items: [string, string][] }) {
 export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null }) {
   const now = (m?.now ?? {}) as Partial<Now>;
   const h = m?.history ?? [];
+  const times = h.map((p) => p.t);
   if (!m || now.cpu == null) {
     return (
       <section>
@@ -110,14 +111,14 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
 
   return (
     <section>
-      <SectionHead id="metrics" title="System" hint={`last ${fmt.duration(Math.max(60, h.length * 2))} · every 2s`} />
+      <SectionHead id="metrics" title="System" hint="last 10 minutes · live every 2 s while open" />
       <div className="grid g-metrics">
         <MetricCard title="CPU">
           <div className="metric-value mono">{fmt.pct(now.cpu)}<small>{info?.cores ?? ""} threads</small></div>
           <div className="cores" aria-label="per-core usage">
             {(now.cores ?? []).map((c, i) => <div key={i} className="core"><span style={{ height: `${c}%` }} /></div>)}
           </div>
-          <Chart series={[{ values: series(h, "cpu"), color: "var(--c1)", label: "CPU" }]} max={100} />
+          <Chart times={times} series={[{ values: series(h, "cpu"), color: "var(--c1)", label: "CPU" }]} max={100} />
           <div className="metric-row mono">
             load <b>{now.load?.map((l) => l.toFixed(2)).join(" ")}</b>
           </div>
@@ -127,7 +128,7 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
           <div className="metric-value mono">
             {fmt.bytes(now.mem_used ?? 0)}<small>/ {fmt.bytes(now.mem_total ?? 0, 0)}</small>
           </div>
-          <Chart series={[{ values: series(h, "mem"), color: "var(--c2)", label: "Memory" },
+          <Chart times={times} series={[{ values: series(h, "mem"), color: "var(--c2)", label: "Memory" },
                           { values: series(h, "swap"), color: "var(--c4)", label: "Swap" }]} max={100} />
           <Legend items={[[`RAM ${fmt.pct(now.mem)}`, "var(--c2)"],
                           [`Swap ${fmt.bytes(now.swap_used ?? 0)}`, "var(--c4)"]]} />
@@ -137,7 +138,7 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
           <div className="metric-value mono">
             ↓ {fmt.rate(now.rx ?? 0)}<small>↑ {fmt.rate(now.tx ?? 0)}</small>
           </div>
-          <Chart series={[{ values: series(h, "rx"), color: "var(--c3)", label: "Download" },
+          <Chart times={times} series={[{ values: series(h, "rx"), color: "var(--c3)", label: "Download" },
                           { values: series(h, "tx"), color: "var(--c1)", label: "Upload" }]} />
           <Legend items={[["Download", "var(--c3)"], ["Upload", "var(--c1)"]]} />
         </MetricCard>
@@ -146,7 +147,7 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
           <div className="metric-value mono">
             {fmt.pct(ig?.util)}<small>Radeon 780M</small>
           </div>
-          <Chart series={[{ values: series(h, "igpu"), color: "var(--c2)", label: "iGPU" },
+          <Chart times={times} series={[{ values: series(h, "igpu"), color: "var(--c2)", label: "iGPU" },
                           { values: series(h, "dgpu"), color: "var(--c3)", label: "dGPU" }]} max={100} />
           <div className="metric-row mono">
             <span>VRAM <b>{ig ? `${fmt.bytes(ig.mem_used * 2 ** 20, 0)} / ${fmt.bytes(ig.mem_total * 2 ** 20, 0)}` : "–"}</b></span>
@@ -162,7 +163,7 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
           <div className="metric-value mono">
             {temps.k10temp != null ? `${Math.round(temps.k10temp)}°C` : "–"}<small>CPU</small>
           </div>
-          <Chart series={[{ values: series(h, "temp_cpu"), color: "var(--c4)", label: "CPU °C" },
+          <Chart times={times} series={[{ values: series(h, "temp_cpu"), color: "var(--c4)", label: "CPU °C" },
                           { values: series(h, "temp_gpu"), color: "var(--c2)", label: "GPU °C" }]} max={100} />
           <div className="metric-row mono">
             <span>GPU <b>{temps.amdgpu != null ? `${Math.round(temps.amdgpu)}°C` : "–"}</b></span>
@@ -182,7 +183,7 @@ export function MetricsGrid({ m, info }: { m: Metrics | null; info: Info | null 
             {disk ? fmt.bytes(disk.used, 0) : "–"}<small>/ {disk ? fmt.bytes(disk.total, 0) : "–"}</small>
           </div>
           <div className="bar"><span style={{ width: `${disk?.percent ?? 0}%` }} /></div>
-          <Chart series={[{ values: series(h, "disk_r"), color: "var(--c3)", label: "Read" },
+          <Chart times={times} series={[{ values: series(h, "disk_r"), color: "var(--c3)", label: "Read" },
                           { values: series(h, "disk_w"), color: "var(--c4)", label: "Write" }]} />
           <Legend items={[[`Read ${fmt.rate(now.disk_r ?? 0)}`, "var(--c3)"],
                           [`Write ${fmt.rate(now.disk_w ?? 0)}`, "var(--c4)"]]} />

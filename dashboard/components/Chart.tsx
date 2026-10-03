@@ -4,15 +4,21 @@ import { useId } from "react";
 
 type Series = { values: (number | null)[]; color: string; label?: string };
 
-/** Minimal area chart. `max` fixes the scale (e.g. 100 for percentages); otherwise
- *  it follows the data. Gaps (null) break the line. */
-export function Chart({ series, max, height = 72 }: { series: Series[]; max?: number; height?: number }) {
+const WINDOW = 600; // seconds shown, matching the API's history
+const GAP = 45;     // seconds between samples that count as a break in the line
+
+/** Minimal area chart over the last 10 minutes. Points are placed by their timestamp
+ *  (`times`), since the API samples every 2 s while watched and every 30 s otherwise.
+ *  `max` fixes the scale (e.g. 100 for percentages); otherwise it follows the data. */
+export function Chart({ series, times, max, height = 72 }: {
+  series: Series[]; times: number[]; max?: number; height?: number;
+}) {
   const id = useId();
   const W = 300;
   const H = height;
-  const n = Math.max(2, ...series.map((s) => s.values.length));
+  const end = times.length ? times[times.length - 1] : 0;
   const peak = max ?? Math.max(1, ...series.flatMap((s) => s.values.filter((v): v is number => v != null))) * 1.15;
-  const x = (i: number) => (i / (n - 1)) * W;
+  const x = (t: number) => Math.max(0, (1 - (end - t) / WINDOW)) * W;
   const y = (v: number) => H - (Math.min(v, peak) / peak) * (H - 2) - 1;
 
   return (
@@ -23,11 +29,12 @@ export function Chart({ series, max, height = 72 }: { series: Series[]; max?: nu
               vectorEffect="non-scaling-stroke" />
       ))}
       {series.map((s, si) => {
-        const offset = n - s.values.length;
         const segments: string[][] = [[]];
         s.values.forEach((v, i) => {
-          if (v == null) segments.push([]);
-          else segments[segments.length - 1].push(`${x(i + offset).toFixed(1)},${y(v).toFixed(1)}`);
+          const t = times[i];
+          const broke = i > 0 && t - times[i - 1] > GAP;
+          if (v == null || broke) segments.push([]);
+          if (v != null) segments[segments.length - 1].push(`${x(t).toFixed(1)},${y(v).toFixed(1)}`);
         });
         const grad = `${id}-g${si}`;
         return (

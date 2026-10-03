@@ -9,7 +9,7 @@ theme='{"background":"#141318","foreground":"#e6e1e8","cursor":"#d0bcff","cursor
 "magenta":"#efb8c8","cyan":"#a5eeff","white":"#e6e1e8","brightBlack":"#49454f","brightRed":"#ffdad6",
 "brightGreen":"#d1ffc0","brightYellow":"#ffe08a","brightBlue":"#e9ddff","brightMagenta":"#ffd8e4",
 "brightCyan":"#c2f3ff","brightWhite":"#ffffff"}'
-exec /usr/bin/ttyd --interface lo --port 7681 --writable --check-origin \
+exec /usr/bin/ttyd --interface lo --port 7681 --writable --check-origin --debug 3 \
   --auth-header Tailscale-User-Login \
   --index "$dir/index.html" \
   -t titleFixed=ash-fedora \

@@ -3,6 +3,7 @@
 #   - lid: stay awake when closed on AC power (suspend on battery)
 #   - tty1 auto-login -> Hyprland, locked immediately (skip with --no-autologin)
 #   - backlight permissions fix for the active backlight device
+#   - cap the system journal at 500M
 # Takes effect at next boot; nothing running is restarted.
 set -euo pipefail
 
@@ -11,6 +12,7 @@ SYS="$REPO_ROOT/system"
 autologin=1
 [[ "${1:-}" == "--no-autologin" ]] && autologin=0
 
+sudo install -D -m 0644 "$SYS/etc/systemd/journald.conf.d/size.conf" /etc/systemd/journald.conf.d/size.conf
 sudo install -D -m 0644 "$SYS/etc/systemd/logind.conf.d/fix-lid.conf" /etc/systemd/logind.conf.d/fix-lid.conf
 sudo install -D -m 0755 "$SYS/usr/local/bin/fix-backlight-permissions" /usr/local/bin/fix-backlight-permissions
 sudo install -D -m 0644 "$SYS/etc/systemd/system/fix-backlight.service" /etc/systemd/system/fix-backlight.service
@@ -27,5 +29,6 @@ fi
 
 sudo systemctl daemon-reload
 sudo systemctl enable fix-backlight.service
+sudo systemctl restart systemd-journald
 sudo systemctl kill -s HUP systemd-logind   # reload lid settings without ending sessions
 echo "System files installed. Auto-login applies from the next boot."

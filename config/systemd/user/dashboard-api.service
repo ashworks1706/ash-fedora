@@ -2,6 +2,11 @@
 Description=ash-fedora dashboard control API (start/stop services; tailnet owner only)
 
 [Service]
+# Background priority: yield CPU/disk to the desktop; soft memory cap
+Nice=10
+CPUWeight=20
+IOWeight=20
+MemoryHigh=150M
 ExecStart=/usr/bin/python3 %h/.local/share/dashboard-api/server.py
 Restart=on-failure
 RestartSec=5

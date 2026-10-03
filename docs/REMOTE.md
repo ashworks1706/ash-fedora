@@ -74,6 +74,31 @@ limg() {  # send the clipboard image to the laptop; copies its path for Cmd+V
   identity (from `tailscale serve`) and only whitelisted start/stop actions.
 - **Power:** lid closed on AC stays awake; on battery it suspends as usual.
 
+## Ports
+
+| Port | Bound to | Exposed as |
+|---|---|---|
+| 8080 | code-server | `:8444` (tailnet) |
+| 8090 | Moonlight Web | `:10000` (tailnet) |
+| 7681 | ttyd | `:8445` (tailnet) |
+| 8095 | dashboard API | `/api` on `:443` and `:8445` (tailnet) |
+| 47984–48010 | Sunshine | Tailscale interface only (firewall) |
+| 40000–40100/udp | Moonlight Web WebRTC | Tailscale interface only |
+| any | `demo PORT` | `:8443` (**public**, while running) |
+
+## Performance
+
+The remote stack is built to cost almost nothing when you aren't using it:
+
+- **Dashboard API:** samples every 2 s (with a process scan) only while a dashboard is
+  open; otherwise every 30 s without one (~0.05% of a core).
+- **NVIDIA GPU** is only queried when already awake and watched, so it can stay in
+  runtime suspend (`nvidia-smi` would wake it).
+- **Priorities:** background services run with lower CPU/IO weight and soft memory caps
+  (`MemoryHigh`), so they yield to the desktop. tmux and Sunshine keep normal priority.
+- **Logs:** ttyd and Moonlight Web log warnings only; the journal is capped at 500 MB.
+- **Stop what you don't use** from the dashboard; `remote-off` stops everything.
+
 ## Keeping the repo in sync
 
 ```bash

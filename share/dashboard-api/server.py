@@ -23,8 +23,10 @@ BIND = ("127.0.0.1", 8095)
 PASTE_DIR = os.path.expanduser("~/.cache/web-paste")
 IMAGE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
 MAX_IMAGE = 25 * 1024 * 1024
-SAMPLE_EVERY = 2          # seconds
-HISTORY = 300             # samples kept: 10 minutes
+SAMPLE_EVERY = 2          # seconds, while the dashboard is open
+IDLE_EVERY = 30           # seconds, when nobody has looked for WATCH_WINDOW
+WATCH_WINDOW = 60
+HISTORY_SECONDS = 600     # graphs show the last 10 minutes
 NVIDIA_PCI = "/sys/bus/pci/devices/0000:01:00.0"
 
 
@@ -129,7 +131,8 @@ def amd_gpu_dir():
 
 AMD = amd_gpu_dir()
 _lock = threading.Lock()
-_history = collections.deque(maxlen=HISTORY)
+_history = collections.deque()
+_wake = threading.Event()  # set by /metrics so an idle sampler speeds up immediately
 _latest = {}
 _procs = []
 _last_view = 0.0          # when a client last asked for metrics
@@ -178,8 +181,11 @@ def sampler():
     prev_t = time.time()
     procs = {}
     while True:
-        time.sleep(SAMPLE_EVERY)
+        watched = time.time() - _last_view < WATCH_WINDOW
+        _wake.wait(SAMPLE_EVERY if watched else IDLE_EVERY)
+        _wake.clear()
         now = time.time()
+        watched = now - _last_view < WATCH_WINDOW
         dt = now - prev_t
         prev_t = now
 
@@ -201,9 +207,10 @@ def sampler():
                     "mem_total": int(read(f"{AMD}/mem_info_vram_total", "0")) / 2**20}
         _nvidia = sample_nvidia()
 
-        # Process table (htop-like): CPU% needs two readings per process.
+        # Process table (htop-like), only while someone is looking: scanning every
+        # process is the sampler's main cost. CPU% needs two readings per process.
         current = {}
-        for p in psutil.process_iter(["pid", "name", "username", "memory_info"]):
+        for p in (psutil.process_iter(["pid", "name", "username", "memory_info"]) if watched else ()):
             proc = procs.get(p.pid, p)
             try:
                 cpu = proc.cpu_percent(None)
@@ -225,14 +232,17 @@ def sampler():
         }
         with _lock:
             _history.append(point)
+            while _history and _history[0]["t"] < now - HISTORY_SECONDS:
+                _history.popleft()
             _latest = {
                 **point, "cores": cores, "load": os.getloadavg(),
                 "mem_used": vm.used, "mem_total": vm.total, "swap_used": sw.used, "swap_total": sw.total,
                 "disk": psutil.disk_usage("/")._asdict(), "temps": temps, "fans": fans,
                 "battery": battery, "igpu_detail": igpu, "nvidia": _nvidia,
             }
-            _procs = [{"cpu": round(c, 1), "pid": pid, "name": n, "user": u, "rss": r}
-                      for c, pid, n, u, r in rows]
+            if watched:
+                _procs = [{"cpu": round(c, 1), "pid": pid, "name": n, "user": u, "rss": r}
+                          for c, pid, n, u, r in rows]
 
 
 # ---------------------------------------------------------------- info
@@ -311,6 +321,8 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/info":
             return self._send(200, info())
         if route == "/metrics":
+            if time.time() - _last_view >= WATCH_WINDOW:
+                _wake.set()  # was idle: sample at full speed from now on
             _last_view = time.time()
             with _lock:
                 return self._send(200, {"now": _latest, "history": list(_history), "procs": _procs})

@@ -2,6 +2,10 @@
 Description=Web terminal (ttyd) attached to tmux, tailnet only
 
 [Service]
+# Background priority: yield CPU/disk to the desktop; soft memory cap
+Nice=5
+CPUWeight=50
+MemoryHigh=200M
 # Loopback only; `tailscale serve` exposes it on :8445 and sets Tailscale-User-Login,
 # which ttyd requires (-H). -O rejects websocket connections from other origins.
 ExecStart=%h/.local/share/web-terminal/run.sh

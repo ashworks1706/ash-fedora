@@ -3,6 +3,11 @@ Description=Receive Taildrop files into ~/Downloads
 After=network-online.target
 
 [Service]
+# Background priority: yield CPU/disk to the desktop; soft memory cap
+Nice=10
+CPUWeight=20
+IOWeight=20
+MemoryHigh=64M
 ExecStart=/usr/bin/tailscale file get --loop --conflict=rename %h/Downloads
 Restart=always
 RestartSec=10

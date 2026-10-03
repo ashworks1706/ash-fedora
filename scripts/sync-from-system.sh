@@ -48,6 +48,7 @@ echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"
 for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal; do
   copy "$CFG/systemd/user/$unit.service" "config/systemd/user/$unit.service"
 done
+copy "$CFG/systemd/user/code-server.service.d/priority.conf" config/systemd/user/code-server.service.d/priority.conf
 copy "$CFG/sunshine/sunshine.conf"       config/sunshine/sunshine.conf   # not sunshine_state.json (credentials, pairings)
 copy "$CFG/sunshine/apps.json"           config/sunshine/apps.json
 copy "$HOME/.local/share/dashboard-api/server.py" share/dashboard-api/server.py
@@ -60,6 +61,7 @@ for bin in start-hyprland kitty-tmux t tmux-server-start demo remote-off remote-
 done
 
 echo "[3/4] System files (installed with scripts/install-system.sh)"
+copy /etc/systemd/journald.conf.d/size.conf             system/etc/systemd/journald.conf.d/size.conf
 copy /etc/systemd/logind.conf.d/fix-lid.conf              system/etc/systemd/logind.conf.d/fix-lid.conf
 copy /etc/systemd/system/getty@tty1.service.d/autologin.conf system/etc/systemd/system/getty@tty1.service.d/autologin.conf
 copy /etc/systemd/system/fix-backlight.service            system/etc/systemd/system/fix-backlight.service

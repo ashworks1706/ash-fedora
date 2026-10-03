@@ -3,6 +3,11 @@ Description=Moonlight Web (browser client for Sunshine, tailnet only)
 After=network-online.target
 
 [Service]
+# Background priority: yield CPU/disk to the desktop; soft memory cap
+Nice=5
+CPUWeight=50
+MemoryHigh=500M
+Environment=LOG_LEVEL=warn
 WorkingDirectory=%h/.local/share/moonlight-web/package
 ExecStart=%h/.local/share/moonlight-web/package/web-server run
 # Web UI only on localhost; reached via `tailscale serve` on :10000
