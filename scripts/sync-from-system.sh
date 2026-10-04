@@ -45,7 +45,7 @@ copy "$CFG/fish/conf.d/hyprland-autostart.fish" config/fish/conf.d/hyprland-auto
 copy "$HOME/.tmux.conf"                  home/.tmux.conf
 
 echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"
-for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal llama-swap ntfy; do
+for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal llama-swap ntfy gdrive-mount; do
   copy "$CFG/systemd/user/$unit.service" "config/systemd/user/$unit.service"
 done
 copy "$CFG/systemd/user/code-server.service.d/priority.conf" config/systemd/user/code-server.service.d/priority.conf

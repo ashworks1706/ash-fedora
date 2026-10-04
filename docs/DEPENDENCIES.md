@@ -14,7 +14,9 @@ under **Remote access** itself.
 | `jq`, `rsync`, `wl-clipboard`, `cliphist`, `brightnessctl`, `playerctl` | scripts and widgets |
 | `network-manager-applet`, `pavucontrol`, `gnome-keyring` + `libsecret` | applets, audio, keyring |
 
-Optional: `matugen` (dynamic theming), `swww` (wallpapers).
+Optional: `matugen` (dynamic theming), `swww` (wallpapers), `rclone` + `fuse3` (Google Drive
+mounted at `~/GoogleDrive` by `gdrive-mount.service`; set up once with `rclone config`, remote
+name `gdrive`, credentials stay in `~/.config/rclone/rclone.conf`).
 
 ## Remote access (`scripts/setup-remote.sh`)
 

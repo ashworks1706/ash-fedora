@@ -25,6 +25,16 @@ Expected once after a reboot with auto-login (there's no login password to unloc
 Otherwise make sure the login keyring password matches your user password
 (`seahorse` → Login → Change Password).
 
+### A user service fails with "start operation timed out" after ~5 s
+
+`/etc/systemd/user.conf` on this machine sets `DefaultTimeoutStartSec=5s`. Services that
+report readiness (`Type=notify` or `forking`, e.g. `gdrive-mount`, `tmux`) can need longer;
+give them `TimeoutStartSec=90` in their unit (both already have it).
+
+### Google Drive folder is empty
+
+`systemctl --user status gdrive-mount`. If rclone's sign-in expired: `rclone config reconnect gdrive:`.
+
 ## Terminal and tmux
 
 ### Sessions disappear when SSH disconnects

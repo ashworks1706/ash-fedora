@@ -123,6 +123,8 @@ SERVICES = {
                  "desc": "Hermes agent (Discord bot); local fallback runs on the model server"},
     "ntfy":     {**unit("ntfy.service"), "name": "Notifications", "port": 8447, "local": 2586,
                  "desc": "ntfy: pushes alerts and notify messages to your phone and browsers"},
+    "drive":    {**unit("gdrive-mount.service"), "name": "Google Drive", "port": None, "local": None,
+                 "desc": "rclone mount of your Google Drive at ~/GoogleDrive"},
     "sunshine": {"status": sunshine_active, "act": sunshine_action, "name": "Sunshine",
                  "port": None, "local": 47989,
                  "desc": "Streams the screen to Moonlight apps and Desktop (AMD VAAPI)"},
@@ -487,7 +489,7 @@ NOTIFY_EVENTS = [  # key, default, label, description
     ("model", False, "AI model", "A model loaded on the GPU or unloaded"),
 ]
 WATCHED_UNITS = ["tmux", "web-terminal", "code-server", "moonlight-web", "llama-swap",
-                 "hermes-gateway", "taildrop-receive", "ntfy"]
+                 "hermes-gateway", "taildrop-receive", "ntfy", "gdrive-mount"]
 _recent = collections.deque(maxlen=25)
 
 

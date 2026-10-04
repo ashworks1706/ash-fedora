@@ -1,0 +1,26 @@
+[Unit]
+Description=Google Drive (rclone)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# /etc/systemd/user.conf sets a 5 s default; this unit can need longer to report ready
+TimeoutStartSec=90
+# Background priority: yield CPU/disk to the desktop
+Nice=10
+IOWeight=20
+Type=notify
+ExecStartPre=/usr/bin/mkdir -p %h/GoogleDrive
+ExecStart=/usr/bin/rclone mount gdrive: %h/GoogleDrive \
+  --vfs-cache-mode writes \
+  --vfs-cache-max-age 72h \
+  --vfs-cache-max-size 10G \
+  --vfs-read-chunk-size 128M \
+  --vfs-read-chunk-size-limit off \
+  --buffer-size 128M
+ExecStop=/usr/bin/fusermount -u %h/GoogleDrive
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

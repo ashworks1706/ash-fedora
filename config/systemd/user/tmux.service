@@ -2,6 +2,8 @@
 Description=tmux server (shared by kitty windows and SSH logins)
 
 [Service]
+# /etc/systemd/user.conf sets a 5 s default; this unit can need longer to report ready
+TimeoutStartSec=90
 Type=forking
 ExecStart=%h/.local/bin/tmux-server-start
 ExecStop=/usr/bin/tmux kill-server
