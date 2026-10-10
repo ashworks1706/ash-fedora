@@ -2,10 +2,12 @@
 """Make servers you start on localhost reachable from your tailnet at http://<host>:PORT.
 
 Run by tailnet-ports.service. Every 5 s, a TCP port (1024-32767) that one of your
-processes listens on at 127.0.0.1/::1 only gets `tailscale serve --tcp PORT`, and the
-forward is removed once the server stops. Servers on 0.0.0.0 are already reachable
-(tailscale0 is a trusted firewall zone) and are left alone, as are ports the remote
-setup already serves and anything listed in ~/.config/tailnet-ports/skip (one per line).
+processes listens on at 127.0.0.1/::1 only gets a Caddy proxy on the laptop's Tailscale
+addresses, same port; it goes away once the server stops. The proxy hands requests to
+the app as localhost:PORT (Host and Origin rewritten, redirects mapped back), so apps
+that only trust localhost (loupe, Vite, Django, Jupyter) work too. Servers on 0.0.0.0
+are already reachable (tailscale0 is a trusted firewall zone) and are left alone, as
+are ports `tailscale serve` uses and anything in ~/.config/tailnet-ports/skip.
 """
 import ipaddress
 import json
@@ -15,7 +17,7 @@ import time
 
 import psutil
 
-STATE = os.path.expanduser("~/.local/state/tailnet-ports.json")  # ports this script added
+CONFIG = os.path.expanduser("~/.local/state/tailnet-ports/caddy.json")
 SKIP_FILE = os.path.expanduser("~/.config/tailnet-ports/skip")
 LOOPBACK = {"127.0.0.1", "::1"}
 TAILNET = (ipaddress.ip_network("100.64.0.0/10"), ipaddress.ip_network("fd7a:115c:a1e0::/48"))
@@ -24,35 +26,18 @@ SKIP_EXE = ("/usr/lib/code-server/", "/opt/cisco/")
 EVERY = 5
 
 
-def tailscale(*args):
-    return subprocess.run(["tailscale", *args], capture_output=True, text=True, timeout=15)
+def run(*cmd):
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=15)
 
 
-def load_state():
+def reserved():
+    """Ports `tailscale serve` uses, front or back, plus the skip file. None if tailscale
+    isn't answering (then nothing changes)."""
     try:
-        with open(STATE) as f:
-            return set(json.load(f))
-    except (OSError, ValueError):
-        return set()
-
-
-def save_state(ports):
-    os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    with open(STATE, "w") as f:
-        json.dump(sorted(ports), f)
-
-
-def reserved(ours):
-    """Ports `tailscale serve` already uses, front or back, that this script didn't add.
-    Also drops from `ours` any forward that's gone (e.g. `tailscale serve reset`)."""
-    try:
-        text = tailscale("serve", "status", "--json").stdout
-        st = json.loads(text or "{}")
+        text = run("tailscale", "serve", "status", "--json").stdout
+        ports = {int(p) for p in json.loads(text or "{}").get("TCP", {})}
     except (subprocess.TimeoutExpired, ValueError):
-        return None                              # tailscale not answering: change nothing
-    served = {int(p) for p in st.get("TCP", {})}
-    ours &= served
-    ports = served - ours
+        return None
     for part in text.replace('"', " ").split():
         if part.startswith(("http://127.0.0.1:", "tcp://127.0.0.1:")):
             ports.add(int(part.rsplit(":", 1)[1].split("/")[0]))
@@ -69,7 +54,7 @@ def local_servers():
     addrs, owners = {}, {}
     for c in psutil.net_connections("tcp"):
         ip = c.laddr.ip.removeprefix("::ffff:").split("%")[0]
-        # tailscaled's own listener on a forwarded port (tailnet address) doesn't count
+        # our own proxy on a tailnet address doesn't count
         if c.status != psutil.CONN_LISTEN or c.laddr.port not in PORTS or \
                 any(ipaddress.ip_address(ip) in net for net in TAILNET):
             continue
@@ -89,26 +74,64 @@ def local_servers():
     return out
 
 
+def caddy_config(servers, tailnet_ips):
+    def proxy(port, addr):
+        local = f"localhost:{port}"
+        return {
+            "listen": [f"{ip}:{port}" if "." in ip else f"[{ip}]:{port}" for ip in tailnet_ips],
+            "automatic_https": {"disable": True},
+            "routes": [{"handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": f"{addr}:{port}"}],
+                "headers": {
+                    "request": {"set": {"Host": [local]},
+                                "replace": {"Origin": [{"search_regexp": "^https?://[^/]+",
+                                                        "replace": f"http://{local}"}]}},
+                    "response": {"replace": {"Location": [{
+                        "search_regexp": f"^https?://(localhost|127\\.0\\.0\\.1|\\[::1\\]):{port}",
+                        "replace": "http://{http.request.hostport}"}]}},
+                },
+            }]}],
+        }
+    admin = "unix/" + os.path.join(os.path.dirname(CONFIG), "admin.sock")   # no TCP port to expose
+    return {"admin": {"listen": admin}, "logging": {"logs": {"default": {"level": "ERROR"}}},
+            "apps": {"http": {"servers": {f"p{p}": proxy(p, a) for p, a in servers.items()}}}}
+
+
+def apply(servers, tailnet_ips):
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    with open(CONFIG, "w") as f:
+        json.dump(caddy_config(servers, tailnet_ips), f, indent=1)
+    return run("caddy", "reload", "--config", CONFIG).returncode == 0
+
+
 def main():
-    ours = load_state()
-    seen = set()                                 # listening on the previous pass
-    while True:
-        if not os.path.exists(os.path.expanduser("~/.config/remote-off")):
-            skip = reserved(ours)
-            if skip is not None:
-                servers = local_servers()
-                for port in sorted(ours - servers.keys()):
-                    tailscale("serve", f"--tcp={port}", "off")
-                    ours.discard(port)
-                    print(f"removed :{port}", flush=True)
-                # Wait for a second sighting so short-lived ports (OAuth callbacks) are skipped.
-                for port in sorted(servers.keys() & seen - ours - skip):
-                    if tailscale("serve", "--bg", f"--tcp={port}", f"tcp://{servers[port]}:{port}").returncode == 0:
-                        ours.add(port)
-                        print(f"serving :{port} -> {servers[port]}:{port}", flush=True)
-                seen = set(servers)
-                save_state(ours)
-        time.sleep(EVERY)
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    with open(CONFIG, "w") as f:
+        json.dump(caddy_config({}, []), f)
+    caddy = subprocess.Popen(["caddy", "run", "--config", CONFIG])
+    current, seen = ({}, []), set()               # (proxied, tailnet IPs) / listening last pass
+    try:
+        while caddy.poll() is None:
+            time.sleep(EVERY)
+            if os.path.exists(os.path.expanduser("~/.config/remote-off")):
+                continue
+            skip = reserved()
+            tailnet_ips = run("tailscale", "ip").stdout.split()
+            if skip is None or not tailnet_ips:
+                continue
+            servers = local_servers()
+            # Wait for a second sighting so short-lived ports (OAuth callbacks) are skipped.
+            wanted = {p: a for p, a in servers.items() if p in seen and p not in skip}
+            seen = set(servers)
+            if (wanted, tailnet_ips) != current and apply(wanted, tailnet_ips):
+                for p in sorted(current[0].keys() - wanted.keys()):
+                    print(f"removed :{p}", flush=True)
+                for p in sorted(wanted.keys() - current[0].keys()):
+                    print(f"serving :{p} -> {wanted[p]}:{p}", flush=True)
+                current = (wanted, tailnet_ips)
+    finally:
+        caddy.terminate()
 
 
 if __name__ == "__main__":

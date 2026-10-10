@@ -70,14 +70,14 @@ Everything you run on the laptop is reachable from your Tailscale devices at
 `http://<host>:PORT` (or `http://<tailscale-ip>:PORT`), fully, not just read-only.
 Servers on `0.0.0.0` already are, because `tailscale0` is a trusted firewall zone.
 Servers that only listen on localhost (the default for Vite, Next.js, uvicorn, Flask,
-Jupyter) are picked up by `tailnet-ports.service` within ~10 s: it adds a
-`tailscale serve --tcp PORT` forward and removes it when the server stops.
+Jupyter) are picked up by `tailnet-ports.service` within ~10 s: Caddy listens on the
+laptop's Tailscale addresses, same port, until the server stops. It hands requests to
+the app as `localhost:PORT` (Host and Origin rewritten, redirects mapped back), so apps
+that only trust localhost (loupe, Vite, Django, Jupyter) work without changes.
 
 - Covers ports 1024-32767 opened by your own processes; skips ports the remote setup
   already serves, VS Code's and Cisco's internals, and anything listed (one per line)
   in `~/.config/tailnet-ports/skip`.
-- Vite 6+ rejects unknown hostnames ("Blocked request"): open it by Tailscale IP, or set
-  `server.allowedHosts` to include `<host>`.
 - Log: `journalctl --user -u tailnet-ports`. Tailnet only; for a public link use `demo PORT`.
 
 ## Logins while you're away
@@ -119,7 +119,7 @@ Not covered: apps that sign in inside their own window, like the ASU VPN (Cisco)
 | 8095 | dashboard API | `/api` on `:443` and `:8445` (tailnet) |
 | 47984–48010 | Sunshine | Tailscale interface only (firewall) |
 | 40000–40100/udp | Moonlight Web WebRTC | Tailscale interface only |
-| 1024–32767 | your localhost-only servers | same port (tailnet), via `tailnet-ports` |
+| 1024–32767 | your localhost-only servers | same port (tailnet), via `tailnet-ports` (Caddy) |
 | any | `demo PORT` | `:8443` (**public**, while running) |
 
 ## Performance

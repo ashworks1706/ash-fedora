@@ -17,7 +17,7 @@ fi
 sudo dnf copr enable -y lizardbyte/stable
 # Hybrid G14: the screen is drawn on the AMD iGPU, so Sunshine encodes there (VAAPI).
 # Fedora's Mesa omits H.264/HEVC encoding; RPM Fusion's freeworld build adds it.
-sudo dnf install -y tailscale Sunshine mesa-va-drivers-freeworld libva-utils jq ttyd nodejs-npm python3-psutil remmina remmina-plugins-vnc
+sudo dnf install -y tailscale Sunshine mesa-va-drivers-freeworld libva-utils jq ttyd caddy nodejs-npm python3-psutil remmina remmina-plugins-vnc
 
 step "2. code-server (VS Code in the browser)"
 if ! command -v code-server >/dev/null; then

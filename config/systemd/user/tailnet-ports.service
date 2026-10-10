@@ -1,5 +1,5 @@
 [Unit]
-Description=Forward localhost-only servers to the tailnet (http://<host>:PORT)
+Description=Proxy localhost-only servers to the tailnet with Caddy (http://<host>:PORT)
 After=network-online.target
 
 [Service]
