@@ -89,6 +89,21 @@ a phone with Wi-Fi and Tailscale off.
 `systemctl --user status dashboard-api`; it needs `python3-psutil` and a logged-in
 Tailscale (it reads the owner and hostname from `tailscale status` at start).
 
+### ASU VPN: "You are missing the required libraries for the authentication method"
+
+Cisco Secure Client 5.1.0.136 signs in through WebKitGTK **4.0**
+(`ldd /opt/cisco/secureclient/bin/acwebhelper | grep 'not found'`), which Fedora no
+longer ships. Install Fedora 42's build and lock it so `dnf update` can't drop it again:
+
+```bash
+sudo dnf install -y --disablerepo='*nvidia*' ~/Downloads/cisco-fix/*.rpm   # javascriptcoregtk4.0 + webkit2gtk4.0 2.47.2 fc42
+sudo dnf versionlock add webkit2gtk4.0 javascriptcoregtk4.0
+```
+
+If an update reports a conflict with them, that's the lock working: hold that update or
+move to a Cisco client that supports WebKitGTK 4.1. The CLI and openconnect can't do
+ASU's SSO; use `asu-vpn on` and sign in through Desktop.
+
 ### Everything stopped answering
 
 Check the laptop is awake: on battery, closing the lid suspends it. Plugged in, it stays
