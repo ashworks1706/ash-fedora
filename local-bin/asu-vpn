@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# ASU VPN (Cisco Secure Client) from the command line, including over SSH.
+#   asu-vpn on        connect (then approve the Duo push on your phone)
+#   asu-vpn off       disconnect
+#   asu-vpn [status]  Connected / Disconnected
+# ASU's profile refuses to connect from a remote login, so `on` runs the client in a
+# tmux window: the tmux server runs under systemd, not inside the SSH session.
+# With ~/.config/asu-vpn/env (chmod 600: ASU_USER=..., ASU_PASS='...') it logs in by
+# itself and only Duo is left; without it, you type the password in the tmux window.
+VPN=/opt/cisco/secureclient/bin/vpn
+HOST=sslvpn.asu.edu/2fa
+CREDS="$HOME/.config/asu-vpn/env"
+LOG="$HOME/.cache/asu-vpn.log"
+
+state() { "$VPN" state | grep '>> state:' | tail -1 | sed 's/.*state: //'; }
+
+case "${1:-status}" in
+  on)
+    tmux has-session 2>/dev/null || systemctl --user start tmux.service
+    if [ -f "$CREDS" ]; then
+      # Answers the prompts in order: username, password, second password (Duo push).
+      tmux new-session -d -s asu-vpn "$0 _login > '$LOG' 2>&1" 2>/dev/null
+      echo "Logging in as $(. "$CREDS"; echo "$ASU_USER"); approve the Duo push on your phone..."
+      for _ in $(seq 1 45); do
+        [ "$(state)" = Connected ] && { echo Connected; exit 0; }
+        sleep 2
+      done
+      echo "Not connected after 90 s. Output:"; grep '>> ' "$LOG" | tail -8; exit 1
+    fi
+    cmd="$VPN connect $HOST; echo; read -rp 'Press Enter to close'"
+    if [ -n "${TMUX:-}" ]; then
+      tmux new-window -n asu-vpn "$cmd"
+    else
+      tmux new-session -d -s asu-vpn "$cmd" 2>/dev/null || true
+      exec tmux attach -t asu-vpn
+    fi ;;
+  _login)
+    . "$CREDS"
+    printf 'connect %s\n%s\n%s\npush\ny\n' "$HOST" "$ASU_USER" "$ASU_PASS" | "$VPN" -s ;;
+  off)    "$VPN" disconnect | grep '>> ' ;;
+  status) state ;;
+  *)      echo "usage: asu-vpn [on|off|status]" >&2; exit 2 ;;
+esac

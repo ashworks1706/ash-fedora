@@ -35,6 +35,7 @@ Pair Moonlight (iPhone app) and Moonlight Web once via Sunshine's web UI at
 | `t [NAME]` | Attach to a tmux session picker, or session NAME |
 | `demo PORT` | Share `localhost:PORT` publicly over HTTPS until Ctrl+C |
 | `remote-off` / `remote-on` | Turn all remote access off (stays off) / back on |
+| `asu-vpn [on\|off\|status]` | ASU VPN (Cisco) from any terminal, SSH included; `on` logs in from `~/.config/asu-vpn/env` (chmod 600) if present, else asks; then Duo |
 | `kitty-tmux` | kitty's shell: reattach to a free tmux session |
 
 ## Web terminal
