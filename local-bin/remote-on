@@ -23,7 +23,7 @@ run tailscale serve --bg --https=8445 --set-path /api http://127.0.0.1:8095
 if ! pgrep -x sunshine >/dev/null; then
   sig=$(ls -t "/run/user/$UID/hypr/" 2>/dev/null | head -1)
   if [ -n "$sig" ]; then
-    run env HYPRLAND_INSTANCE_SIGNATURE="$sig" hyprctl dispatch exec sunshine
+    run env HYPRLAND_INSTANCE_SIGNATURE="$sig" hyprctl dispatch exec sunshine-run
   else
     echo "Hyprland isn't running; Sunshine will start when you log in."
   fi

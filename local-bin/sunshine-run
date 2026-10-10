@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Run Sunshine inside the Hyprland session and restart it if it crashes. It can abort
+# with "Hang detected" while tearing down a stream, which would leave Desktop and the
+# Moonlight apps with nothing to connect to. A clean stop (pkill, remote-off) ends the loop.
+pgrep -x sunshine >/dev/null && exit 0
+while [ ! -e "$HOME/.config/remote-off" ]; do
+  sunshine
+  status=$?
+  # 0 = normal exit; 130/143 = SIGINT/SIGTERM (stopped on purpose). Anything else is a crash.
+  case $status in 0|130|143) exit 0 ;; esac
+  echo "sunshine exited with status $status; restarting in 3 s" >&2
+  sleep 3
+done

@@ -99,6 +99,11 @@ The remote stack is built to cost almost nothing when you aren't using it:
 - **Priorities:** background services run with lower CPU/IO weight and soft memory caps
   (`MemoryHigh`), so they yield to the desktop. tmux and Sunshine keep normal priority.
 - **Logs:** ttyd and Moonlight Web log warnings only; the journal is capped at 500 MB.
+- **Idle auto-stop:** VS Code, Terminal and Desktop stop on their own after 30 minutes
+  with no browser tab connected (an open tab counts as in use; so does a Desktop stream).
+  Start them again from the dashboard; tmux sessions, Sunshine and the dashboard keep
+  running. Change the time with `{"minutes": 60}` in `~/.config/dashboard/autostop.json`
+  (`0` turns it off); there's an "Idle auto-stop" alert switch on the dashboard.
 - **Stop what you don't use** from the dashboard; `remote-off` stops everything.
 
 ## Keeping the repo in sync

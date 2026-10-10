@@ -84,7 +84,7 @@ def sunshine_action(action):
     if not sockets:
         return False
     env = dict(os.environ, HYPRLAND_INSTANCE_SIGNATURE=os.path.basename(os.path.dirname(sockets[-1])))
-    return run("hyprctl", "dispatch", "exec", "sunshine", env=env).returncode == 0
+    return run("hyprctl", "dispatch", "exec", "sunshine-run", env=env).returncode == 0
 
 
 def demo_active():
@@ -487,6 +487,7 @@ NOTIFY_EVENTS = [  # key, default, label, description
     ("ssh", True, "SSH login", "Someone signed in over Tailscale SSH"),
     ("taildrop", True, "File received", "A file arrived via Taildrop"),
     ("model", False, "AI model", "A model loaded on the GPU or unloaded"),
+    ("autostop", True, "Idle auto-stop", "VS Code, Terminal or Desktop was stopped after nobody used it"),
 ]
 WATCHED_UNITS = ["tmux", "web-terminal", "code-server", "moonlight-web", "llama-swap",
                  "hermes-gateway", "taildrop-receive", "ntfy", "gdrive-mount"]
@@ -656,6 +657,53 @@ def notifier():
         last = now
 
 
+# ---------------------------------------------------------------- idle auto-stop
+
+AUTOSTOP = ["vscode", "terminal", "desktop"]   # browser services; each has a "local" port
+AUTOSTOP_SETTINGS = os.path.expanduser("~/.config/dashboard/autostop.json")
+AUTOSTOP_MINUTES = 30
+AUTOSTOP_CHECK = 60       # seconds
+
+
+def autostop_minutes():
+    """Idle minutes before a browser service is stopped; 0 turns auto-stop off."""
+    try:
+        with open(AUTOSTOP_SETTINGS) as f:
+            return max(0, int(json.load(f).get("minutes", AUTOSTOP_MINUTES)))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return AUTOSTOP_MINUTES
+
+
+def in_use(sid):
+    """An open tab keeps a websocket to the local port (via `tailscale serve`).
+    A Desktop stream sends video over WebRTC, but runs a `streamer` process meanwhile."""
+    port = SERVICES[sid]["local"]
+    if any(c.status == psutil.CONN_ESTABLISHED and c.laddr.port == port
+           for c in psutil.net_connections("tcp")):
+        return True
+    return sid == "desktop" and any(p.info["name"] == "streamer" for p in psutil.process_iter(["name"]))
+
+
+def autostopper():
+    """Stop VS Code, Terminal and Desktop once nothing has been connected for the idle
+    time. Start them again from the dashboard (tmux sessions and Sunshine keep running)."""
+    idle_since = {}
+    while True:
+        time.sleep(AUTOSTOP_CHECK)
+        minutes, now = autostop_minutes(), time.time()
+        for sid in AUTOSTOP:
+            if not minutes or not SERVICES[sid]["status"]() or in_use(sid):
+                idle_since.pop(sid, None)
+                continue
+            if now - idle_since.setdefault(sid, now) >= minutes * 60:
+                idle_since.pop(sid)
+                if SERVICES[sid]["act"]("stop"):
+                    name = SERVICES[sid]["name"]
+                    send_notification(f"{name} stopped", f"Nobody used {name} for {minutes} minutes. "
+                                      "Start it again from the dashboard.", "low", "zzz",
+                                      f"https://{HOST}", "autostop")
+
+
 def ntfy_history(limit=8):
     """Recent messages from ntfy's own cache (survives restarts; includes `notify` CLI messages)."""
     c = ntfy_client()
@@ -795,4 +843,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     threading.Thread(target=sampler, daemon=True).start()
     threading.Thread(target=notifier, daemon=True).start()
+    threading.Thread(target=autostopper, daemon=True).start()
     ThreadingHTTPServer(BIND, Handler).serve_forever()
