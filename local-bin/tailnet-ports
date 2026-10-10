@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Make servers you start on localhost reachable from your tailnet at http://<host>:PORT.
+
+Run by tailnet-ports.service. Every 5 s, a TCP port (1024-32767) that one of your
+processes listens on at 127.0.0.1/::1 only gets `tailscale serve --tcp PORT`, and the
+forward is removed once the server stops. Servers on 0.0.0.0 are already reachable
+(tailscale0 is a trusted firewall zone) and are left alone, as are ports the remote
+setup already serves and anything listed in ~/.config/tailnet-ports/skip (one per line).
+"""
+import ipaddress
+import json
+import os
+import subprocess
+import time
+
+import psutil
+
+STATE = os.path.expanduser("~/.local/state/tailnet-ports.json")  # ports this script added
+SKIP_FILE = os.path.expanduser("~/.config/tailnet-ports/skip")
+LOOPBACK = {"127.0.0.1", "::1"}
+TAILNET = (ipaddress.ip_network("100.64.0.0/10"), ipaddress.ip_network("fd7a:115c:a1e0::/48"))
+PORTS = range(1024, 32768)                       # above that: ephemeral/internal ports
+SKIP_EXE = ("/usr/lib/code-server/", "/opt/cisco/")
+EVERY = 5
+
+
+def tailscale(*args):
+    return subprocess.run(["tailscale", *args], capture_output=True, text=True, timeout=15)
+
+
+def load_state():
+    try:
+        with open(STATE) as f:
+            return set(json.load(f))
+    except (OSError, ValueError):
+        return set()
+
+
+def save_state(ports):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, "w") as f:
+        json.dump(sorted(ports), f)
+
+
+def reserved(ours):
+    """Ports `tailscale serve` already uses, front or back, that this script didn't add.
+    Also drops from `ours` any forward that's gone (e.g. `tailscale serve reset`)."""
+    try:
+        text = tailscale("serve", "status", "--json").stdout
+        st = json.loads(text or "{}")
+    except (subprocess.TimeoutExpired, ValueError):
+        return None                              # tailscale not answering: change nothing
+    served = {int(p) for p in st.get("TCP", {})}
+    ours &= served
+    ports = served - ours
+    for part in text.replace('"', " ").split():
+        if part.startswith(("http://127.0.0.1:", "tcp://127.0.0.1:")):
+            ports.add(int(part.rsplit(":", 1)[1].split("/")[0]))
+    try:
+        with open(SKIP_FILE) as f:
+            ports |= {int(x) for x in f.read().split() if x.isdigit()}
+    except OSError:
+        pass
+    return ports
+
+
+def local_servers():
+    """{port: address} for your processes listening on loopback only."""
+    addrs, owners = {}, {}
+    for c in psutil.net_connections("tcp"):
+        ip = c.laddr.ip.removeprefix("::ffff:").split("%")[0]
+        # tailscaled's own listener on a forwarded port (tailnet address) doesn't count
+        if c.status != psutil.CONN_LISTEN or c.laddr.port not in PORTS or \
+                any(ipaddress.ip_address(ip) in net for net in TAILNET):
+            continue
+        addrs.setdefault(c.laddr.port, set()).add(ip)
+        if c.pid:
+            owners[c.laddr.port] = c.pid
+    out = {}
+    for port, ips in addrs.items():
+        if not ips <= LOOPBACK or port not in owners:   # 0.0.0.0, or not your process
+            continue
+        try:
+            if psutil.Process(owners[port]).exe().startswith(SKIP_EXE):
+                continue
+        except psutil.Error:
+            continue
+        out[port] = "127.0.0.1" if "127.0.0.1" in ips else "[::1]"
+    return out
+
+
+def main():
+    ours = load_state()
+    seen = set()                                 # listening on the previous pass
+    while True:
+        if not os.path.exists(os.path.expanduser("~/.config/remote-off")):
+            skip = reserved(ours)
+            if skip is not None:
+                servers = local_servers()
+                for port in sorted(ours - servers.keys()):
+                    tailscale("serve", f"--tcp={port}", "off")
+                    ours.discard(port)
+                    print(f"removed :{port}", flush=True)
+                # Wait for a second sighting so short-lived ports (OAuth callbacks) are skipped.
+                for port in sorted(servers.keys() & seen - ours - skip):
+                    if tailscale("serve", "--bg", f"--tcp={port}", f"tcp://{servers[port]}:{port}").returncode == 0:
+                        ours.add(port)
+                        print(f"serving :{port} -> {servers[port]}:{port}", flush=True)
+                seen = set(servers)
+                save_state(ours)
+        time.sleep(EVERY)
+
+
+if __name__ == "__main__":
+    main()

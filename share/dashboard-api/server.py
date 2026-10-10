@@ -492,7 +492,7 @@ NOTIFY_EVENTS = [  # key, default, label, description
     ("autostop", True, "Idle auto-stop", "VS Code, Terminal or Desktop was stopped after nobody used it"),
 ]
 WATCHED_UNITS = ["tmux", "web-terminal", "code-server", "moonlight-web", "llama-swap",
-                 "hermes-gateway", "taildrop-receive", "ntfy", "gdrive-mount"]
+                 "hermes-gateway", "taildrop-receive", "ntfy", "gdrive-mount", "tailnet-ports"]
 _recent = collections.deque(maxlen=25)
 
 

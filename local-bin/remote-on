@@ -10,7 +10,7 @@ run rm -f "$HOME/.config/remote-off"
 run sudo systemctl enable --now tailscaled
 [ $DRY = 1 ] || sleep 2
 run tailscale up
-run systemctl --user enable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal llama-swap ntfy
+run systemctl --user enable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal llama-swap ntfy tailnet-ports
 run tailscale serve --bg --https=443 "$HOME/.local/share/dashboard"
 run tailscale serve --bg --https=443 --set-path /api http://127.0.0.1:8095
 run tailscale serve --bg --https=8444 http://127.0.0.1:8080

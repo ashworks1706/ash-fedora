@@ -45,7 +45,7 @@ copy "$CFG/fish/conf.d/hyprland-autostart.fish" config/fish/conf.d/hyprland-auto
 copy "$HOME/.tmux.conf"                  home/.tmux.conf
 
 echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"
-for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal llama-swap ntfy gdrive-mount; do
+for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal llama-swap ntfy gdrive-mount tailnet-ports; do
   copy "$CFG/systemd/user/$unit.service" "config/systemd/user/$unit.service"
 done
 copy "$CFG/systemd/user/code-server.service.d/priority.conf" config/systemd/user/code-server.service.d/priority.conf
@@ -60,7 +60,7 @@ done
 copy "$HOME/.local/share/applications/open-url.desktop" share/applications/open-url.desktop
 # code-server's config.yaml holds the password: only a template lives in the repo.
 for bin in start-hyprland kitty-tmux t tmux-server-start demo remote-off remote-on internal-mic-quality notify \
-           sunshine-run asu-vpn open-url; do
+           sunshine-run asu-vpn open-url tailnet-ports; do
   copy "$HOME/.local/bin/$bin" "local-bin/$bin"
 done
 
