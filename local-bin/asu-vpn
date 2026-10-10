@@ -1,43 +1,23 @@
 #!/usr/bin/env bash
-# ASU VPN (Cisco Secure Client) from the command line, including over SSH.
-#   asu-vpn on        connect (then approve the Duo push on your phone)
+# ASU VPN (Cisco Secure Client) from any terminal, SSH included.
+#   asu-vpn on        open Cisco Secure Client on the laptop's screen
 #   asu-vpn off       disconnect
 #   asu-vpn [status]  Connected / Disconnected
-# ASU's profile refuses to connect from a remote login, so `on` runs the client in a
-# tmux window: the tmux server runs under systemd, not inside the SSH session.
-# With ~/.config/asu-vpn/env (chmod 600: ASU_USER=..., ASU_PASS='...') it logs in by
-# itself and only Duo is left; without it, you type the password in the tmux window.
+# ASU signs in through a web page (SSO + Duo) that only works in Cisco's own window:
+# the CLI and openconnect can't do it. So `on` opens the app on the desktop, and you
+# finish in Desktop (Moonlight Web) from wherever you are.
 VPN=/opt/cisco/secureclient/bin/vpn
-HOST=sslvpn.asu.edu/2fa
-CREDS="$HOME/.config/asu-vpn/env"
-LOG="$HOME/.cache/asu-vpn.log"
-
-state() { "$VPN" state | grep '>> state:' | tail -1 | sed 's/.*state: //'; }
 
 case "${1:-status}" in
   on)
-    tmux has-session 2>/dev/null || systemctl --user start tmux.service
-    if [ -f "$CREDS" ]; then
-      # Answers the prompts in order: username, password, second password (Duo push).
-      tmux new-session -d -s asu-vpn "$0 _login > '$LOG' 2>&1" 2>/dev/null
-      echo "Logging in as $(. "$CREDS"; echo "$ASU_USER"); approve the Duo push on your phone..."
-      for _ in $(seq 1 45); do
-        [ "$(state)" = Connected ] && { echo Connected; exit 0; }
-        sleep 2
-      done
-      echo "Not connected after 90 s. Output:"; grep '>> ' "$LOG" | tail -8; exit 1
-    fi
-    cmd="$VPN connect $HOST; echo; read -rp 'Press Enter to close'"
-    if [ -n "${TMUX:-}" ]; then
-      tmux new-window -n asu-vpn "$cmd"
-    else
-      tmux new-session -d -s asu-vpn "$cmd" 2>/dev/null || true
-      exec tmux attach -t asu-vpn
-    fi ;;
-  _login)
-    . "$CREDS"
-    printf 'connect %s\n%s\n%s\npush\ny\n' "$HOST" "$ASU_USER" "$ASU_PASS" | "$VPN" -s ;;
+    sig=$(ls -t "/run/user/$UID/hypr/" 2>/dev/null | head -1)
+    [ -n "$sig" ] || { echo "Hyprland isn't running; log in on the laptop first." >&2; exit 1; }
+    systemctl --user start moonlight-web
+    HYPRLAND_INSTANCE_SIGNATURE="$sig" hyprctl dispatch exec /opt/cisco/secureclient/bin/vpnui >/dev/null
+    host=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName | rtrimstr(".")')
+    echo "Cisco Secure Client is open on the laptop. In Desktop (https://$host:10000):"
+    echo "click Connect, sign in, approve Duo. Then check with: asu-vpn" ;;
   off)    "$VPN" disconnect | grep '>> ' ;;
-  status) state ;;
+  status) "$VPN" state | grep '>> state:' | tail -1 | sed 's/.*state: //' ;;
   *)      echo "usage: asu-vpn [on|off|status]" >&2; exit 2 ;;
 esac
