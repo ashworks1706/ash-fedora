@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Open URL (here or on your Mac)
+Comment=Brave at the laptop; sends the link to your devices when you're away
+Exec=open-url %u
+NoDisplay=true
+MimeType=x-scheme-handler/http;x-scheme-handler/https;

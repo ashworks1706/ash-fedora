@@ -36,6 +36,7 @@ Pair Moonlight (iPhone app) and Moonlight Web once via Sunshine's web UI at
 | `demo PORT` | Share `localhost:PORT` publicly over HTTPS until Ctrl+C |
 | `remote-off` / `remote-on` | Turn all remote access off (stays off) / back on |
 | `asu-vpn [on\|off\|status]` | ASU VPN from any terminal: `on` opens Cisco Secure Client on the laptop; sign in + Duo through Desktop (ASU SSO only works in that window) |
+| `open-url URL` | The default browser: Brave at the laptop; when it's locked (or on SSH) sends the link to your devices instead |
 | `kitty-tmux` | kitty's shell: reattach to a free tmux session |
 
 ## Web terminal
@@ -62,6 +63,21 @@ limg() {  # send the clipboard image to the laptop; copies its path for Cmd+V
   echo "Image sent: Cmd+V pastes its path"
 }
 ```
+
+## Logins while you're away
+
+Anything on the laptop that opens a web page (`gh auth login`, `gcloud auth login`, OAuth in
+your projects) goes through `open-url`. When the screen is locked, which happens after 5
+idle minutes, or the command runs over SSH, the page isn't opened on the laptop. Instead it
+arrives as an ntfy notification and in **Links** on the dashboard; open it on your Mac and sign in.
+
+If the login then ends on a `http://localhost:PORT/...` page that won't load (on the Mac,
+localhost is the Mac), copy that address into **Links → Finish**: the laptop opens it and
+the login completes. Tools with a code-on-a-web-page option (`gh`, `gcloud --no-browser`)
+don't need this step.
+
+Not covered: apps that sign in inside their own window, like the ASU VPN (Cisco). Use
+`asu-vpn on` and finish in Desktop.
 
 ## How it fits together
 

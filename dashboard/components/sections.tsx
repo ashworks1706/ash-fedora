@@ -430,6 +430,63 @@ export function Notifications() {
   );
 }
 
+/* ------------------------------------------------------------------ links (open-url) */
+
+type Link = { t: number; url: string };
+
+export function Links() {
+  const [links, setLinks] = useState<Link[]>([]);
+  const [cb, setCb] = useState("");
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const load = async () => {
+    try { const r = await fetch("/api/links", { cache: "no-store" }); if (r.ok) setLinks(await r.json()); } catch {}
+  };
+  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+  const finish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResult(null);
+    const r = await fetch("/api/links/finish", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard": "1" }, body: JSON.stringify({ url: cb }),
+    });
+    const j = await r.json().catch(() => ({}));
+    setResult(r.ok ? { ok: j.ok, text: `${j.ok ? "Done" : "Answered"} (HTTP ${j.status})${j.text ? `: ${j.text}` : ""}` }
+                   : { ok: false, text: j.error ?? `HTTP ${r.status}` });
+    if (r.ok && j.ok) setCb("");
+  };
+
+  return (
+    <section>
+      <SectionHead id="links" title="Links" hint="pages the laptop opened while you were away" />
+      <div className="grid g-two">
+        <div className="card flush">
+          <div className="list">
+            {links.length ? links.map((l, i) => (
+              <div className="list-row" key={i}>
+                <a className="mono" href={l.url} target="_blank" rel="noreferrer"
+                   style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.url}</a>
+                <span className="meta">{fmt.ago(l.t)}</span>
+              </div>
+            )) : <div className="list-row meta">None yet. When the laptop is locked (or you&apos;re on SSH), links it
+              would open show up here and as a notification.</div>}
+          </div>
+        </div>
+        <form className="card" onSubmit={finish}>
+          <div className="card-desc">
+            Login ended on a <span className="mono">localhost:…</span> page that won&apos;t load? Paste its address:
+            the laptop opens it and the login completes.
+          </div>
+          <div className="btns">
+            <input className="input mono" placeholder="http://localhost:PORT/…" value={cb}
+                   onChange={(e) => setCb(e.target.value)} aria-label="Callback address" style={{ flex: 1, minWidth: 0 }} />
+            <button className="btn primary" type="submit" disabled={!cb.trim()}>Finish</button>
+          </div>
+          {result && <div className="meta" style={{ color: result.ok ? undefined : "var(--bad)", overflowWrap: "anywhere" }}>{result.text}</div>}
+        </form>
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ processes, sessions, devices */
 
 export function Activity({ m, info }: { m: Metrics | null; info: Info | null }) {

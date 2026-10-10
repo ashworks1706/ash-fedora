@@ -11,11 +11,13 @@ import glob
 import json
 import os
 import platform
+import re
 import socket
 import subprocess
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -734,6 +736,46 @@ def notify_view():
             "configured": bool(c["NTFY_TOKEN"])}
 
 
+# ---------------------------------------------------------------- links (open-url)
+
+LINKS_FILE = os.path.expanduser("~/.cache/open-url/links.tsv")
+LOOPBACK = {"localhost", "127.0.0.1", "::1"}
+
+
+def recent_links(limit=8):
+    """Links open-url sent here while you were away, newest first."""
+    rows = []
+    for line in read(LINKS_FILE).splitlines()[-limit:]:
+        t, _, url = line.partition("\t")
+        if t.isdigit() and url:
+            rows.append({"t": int(t), "url": url})
+    return rows[::-1]
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def finish_callback(url):
+    """Open a login's http://localhost:PORT/... callback from the laptop itself: on the
+    Mac, localhost is the Mac. Loopback only, and redirects aren't followed."""
+    parsed = urllib.parse.urlsplit(url.strip())
+    if parsed.scheme != "http" or parsed.hostname not in LOOPBACK:
+        return 400, {"error": "only http://localhost:PORT/... addresses"}
+    opener = urllib.request.build_opener(_NoRedirect)
+    try:
+        with opener.open(url.strip(), timeout=15) as r:
+            code, body = r.status, r.read(2000)
+    except urllib.error.HTTPError as e:
+        code, body = e.code, e.read(2000)
+    except (urllib.error.URLError, OSError) as e:
+        return 502, {"error": f"nothing answered there ({getattr(e, 'reason', e)}); the login may have timed out"}
+    html = re.sub(r"(?is)<(head|style|script)\b.*?</\1>", " ", body.decode(errors="replace"))
+    text = " ".join(re.sub(r"<[^>]+>", " ", html).split())
+    return 200, {"ok": code < 400, "status": code, "text": text[:300]}
+
+
 # ---------------------------------------------------------------- HTTP
 
 class Handler(BaseHTTPRequestHandler):
@@ -768,6 +810,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, notify_view())
         if route == "/ai/status":
             return self._send(200, ai_status())
+        if route == "/links":
+            return self._send(200, recent_links())
         if route == "/metrics":
             if time.time() - _last_view >= WATCH_WINDOW:
                 _wake.set()  # was idle: sample at full speed from now on
@@ -801,6 +845,12 @@ class Handler(BaseHTTPRequestHandler):
                     st["events"][k] = v
             save_notify_settings(st)
             return self._send(200, notify_view())
+        if route == "/links/finish":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            except ValueError:
+                return self._send(400, {"error": "invalid JSON"})
+            return self._send(*finish_callback(str(body.get("url", ""))))
         if route.startswith("/ai/load/"):
             try:
                 return self._send(200 if ai_load(route[len("/ai/load/"):]) else 404, {"ok": True})

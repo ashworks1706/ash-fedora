@@ -46,6 +46,7 @@ declare -A FILES=(
   [share/web-terminal/inject.html]="$SHARE/web-terminal/inject.html"
   [share/web-terminal/make-index.sh]="$SHARE/web-terminal/make-index.sh"
   [share/web-terminal/run.sh]="$SHARE/web-terminal/run.sh"
+  [share/applications/open-url.desktop]="$SHARE/applications/open-url.desktop"
 )
 for unit in "$REPO_ROOT"/config/systemd/user/*.service; do
   FILES[config/systemd/user/$(basename "$unit")]="$XDG_CONFIG_HOME/systemd/user/$(basename "$unit")"
@@ -121,6 +122,9 @@ if command -v npm >/dev/null; then
 else
   echo "  npm not found: skipped the dashboard (scripts/build-dashboard.sh later)"
 fi
+
+# Links go through open-url (Brave at the laptop, your Mac when away)
+xdg-mime default open-url.desktop x-scheme-handler/http x-scheme-handler/https 2>/dev/null || true
 
 echo "[5/5] Reloading user services"
 systemctl --user daemon-reload 2>/dev/null || true

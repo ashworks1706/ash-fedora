@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# This machine's default browser (http/https links, $BROWSER). At the laptop it opens
+# Brave as usual. When you're away (screen locked, or run over SSH) it sends the link
+# to your Mac and phone instead: an ntfy notification, plus the Links list on the
+# dashboard. If a login then ends on a http://localhost:PORT page that won't load on
+# the Mac, paste that address into Links on the dashboard and the laptop finishes it.
+url="${1:-}"
+[ -n "$url" ] || { echo "usage: open-url URL" >&2; exit 2; }
+if [ -z "${SSH_CONNECTION:-}" ] && ! pgrep -x hyprlock >/dev/null; then
+  exec /var/lib/flatpak/exports/bin/com.brave.Browser "$@"
+fi
+mkdir -p "$HOME/.cache/open-url"
+printf '%s\t%s\n' "$(date +%s)" "$url" >> "$HOME/.cache/open-url/links.tsv"
+notify -t "Open on your Mac" -g link -c "$url" "$url" || true
+echo "Sent to your devices (ntfy + dashboard Links): $url" >&2
