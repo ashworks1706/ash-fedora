@@ -79,8 +79,8 @@ on localhost instead.
 ### VS Code's "Open in Browser" gives a 404
 
 The tab is on an old address; code-server lives at `https://<host>.ts.net:8444`.
-Its `/proxy/PORT/` also breaks apps that load assets from `/`; prefer
-`http://<host>:PORT`.
+Its `/proxy/PORT/` also breaks apps that load assets from `/`; open
+`https://<host>.ts.net:PORT` instead.
 
 ### `demo PORT` link doesn't load for others
 
