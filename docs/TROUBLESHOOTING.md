@@ -72,7 +72,9 @@ The command ttyd runs is failing. Check `journalctl --user -u web-terminal` for
 Localhost-only servers are forwarded within ~10 s; check `journalctl --user -u tailnet-ports`
 (ports above 32767 and those in `~/.config/tailnet-ports/skip` are left out). Apps that
 reject other hostnames (Vite `allowedHosts`, Django `ALLOWED_HOSTS`, FastAPI
-`TrustedHostMiddleware`) need `<host>` allowed, or open them by Tailscale IP.
+`TrustedHostMiddleware`, loupe's `louped serve`) answer `400 Invalid host header`: allow
+`<host>` in the app, or tunnel from the Mac so it sees `localhost`:
+`ssh -N -L PORT:localhost:PORT <user>@<host>`, then open `http://localhost:PORT`.
 
 ### VS Code's "Open in Browser" gives a 404
 

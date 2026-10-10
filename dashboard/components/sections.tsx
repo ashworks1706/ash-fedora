@@ -567,6 +567,7 @@ export function Commands({ info }: { info: Info | null }) {
           <div className="term">
             <div className="term-bar"><i /><i /><i /><span className="mono">from your Mac or iPhone</span></div>
             <Cmd text={`ssh -t ${user}@${name} t`} note="pick a tmux session" />
+            <Cmd text={`ssh -N -L 8000:localhost:8000 ${user}@${name}`} note="app that only trusts localhost" />
             <Cmd text={`scp FILE ${user}@${name}:~/Downloads/`} note="send a file" />
             <Cmd text={`scp ${user}@${name}:~/PATH ~/Desktop/`} note="fetch a file" />
             <Cmd text={`rsync -avz DIR/ ${user}@${name}:~/DIR/`} note="sync a folder" />
