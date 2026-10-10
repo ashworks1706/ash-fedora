@@ -557,7 +557,6 @@ function Cmd({ text, note }: { text: string; note: string }) {
 }
 
 export function Commands({ info }: { info: Info | null }) {
-  const [port, setPort] = useState("");
   const user = info?.user || "user";
   const name = info?.hostname || "host";
   return (
@@ -568,7 +567,6 @@ export function Commands({ info }: { info: Info | null }) {
           <div className="term">
             <div className="term-bar"><i /><i /><i /><span className="mono">from your Mac or iPhone</span></div>
             <Cmd text={`ssh -t ${user}@${name} t`} note="pick a tmux session" />
-            <Cmd text={`ssh -N -L 8000:localhost:8000 ${user}@${name}`} note="tunnel a local-only port" />
             <Cmd text={`scp FILE ${user}@${name}:~/Downloads/`} note="send a file" />
             <Cmd text={`scp ${user}@${name}:~/PATH ~/Desktop/`} note="fetch a file" />
             <Cmd text={`rsync -avz DIR/ ${user}@${name}:~/DIR/`} note="sync a folder" />
@@ -582,21 +580,6 @@ export function Commands({ info }: { info: Info | null }) {
           </div>
         </div>
         <div>
-          <SectionHead id="preview" title="Preview a dev server" />
-          <form className="card" onSubmit={(e) => {
-            e.preventDefault();
-            if (/^\d{2,5}$/.test(port)) window.open(`http://${name}:${port}`, "_blank");
-          }}>
-            <div className="card-desc">
-              Start it with <span className="mono">--host</span> (Vite) or <span className="mono">-H 0.0.0.0</span> (Next.js),
-              then open it from any of your devices.
-            </div>
-            <div className="btns">
-              <input className="input mono" inputMode="numeric" placeholder="3000" value={port}
-                     onChange={(e) => setPort(e.target.value.trim())} aria-label="Port" />
-              <button className="btn primary" type="submit">Open</button>
-            </div>
-          </form>
           <SectionHead title="Files" />
           <div className="card">
             <p className="card-desc" style={{ margin: 0 }}>
