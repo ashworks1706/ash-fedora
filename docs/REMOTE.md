@@ -23,7 +23,7 @@ Pair Moonlight (iPhone app) and Moonlight Web once via Sunshine's web UI at
 | `https://<host>.ts.net:8444` | VS Code in the browser (code-server) |
 | `https://<host>.ts.net:10000` | Full desktop in the browser (Moonlight Web) |
 | `https://<host>.ts.net:8445` | Terminal in the browser (ttyd → your tmux sessions) |
-| `http://<host>:PORT` | Any server you run on the laptop (`npm run dev`, a Python app, a database): localhost-only ones are forwarded automatically |
+| `https://<host>.ts.net:PORT` | Any server you run on the laptop on localhost (`npm run dev`, a Python app), forwarded automatically |
 | Moonlight app → `<host>` | Full desktop, lowest latency |
 | `ssh -t <user>@<host> t` | Pick a tmux session (same ones as on the laptop) |
 | `https://<host>.ts.net:8443` | **Public** link while `demo PORT` runs |
@@ -66,18 +66,19 @@ limg() {  # send the clipboard image to the laptop; copies its path for Cmd+V
 
 ## Your own servers
 
-Everything you run on the laptop is reachable from your Tailscale devices at
-`http://<host>:PORT` (or `http://<tailscale-ip>:PORT`), fully, not just read-only.
-Servers on `0.0.0.0` already are, because `tailscale0` is a trusted firewall zone.
-Servers that only listen on localhost (the default for Vite, Next.js, uvicorn, Flask,
-Jupyter) are picked up by `tailnet-ports.service` within ~10 s: Caddy listens on the
-laptop's Tailscale addresses, same port, until the server stops. It hands requests to
-the app as `localhost:PORT` (Host and Origin rewritten, redirects mapped back), so apps
-that only trust localhost (loupe, Vite, Django, Jupyter) work without changes.
+Anything you start on the laptop on localhost (the default for Vite, Next.js, uvicorn,
+Flask, Jupyter) is at `https://<host>.ts.net:PORT` on your Tailscale devices within ~10 s,
+fully, not just read-only. `tailnet-ports.service` runs Caddy on the laptop's Tailscale
+addresses, same port, with Tailscale's HTTPS certificate like the other services, until
+the server stops. Caddy hands requests to the app as `localhost:PORT` (Host and Origin
+rewritten, redirects mapped back), so apps that only trust localhost (loupe, Vite,
+Django, Jupyter) work without changes.
 
 - Covers ports 1024-32767 opened by your own processes; skips ports the remote setup
   already serves, VS Code's and Cisco's internals, and anything listed (one per line)
   in `~/.config/tailnet-ports/skip`.
+- A server on `0.0.0.0` isn't proxied: it's reachable directly at `http://<host>:PORT`
+  (`tailscale0` is a trusted firewall zone).
 - Log: `journalctl --user -u tailnet-ports`. Tailnet only; for a public link use `demo PORT`.
 
 ## Logins while you're away
@@ -119,7 +120,7 @@ Not covered: apps that sign in inside their own window, like the ASU VPN (Cisco)
 | 8095 | dashboard API | `/api` on `:443` and `:8445` (tailnet) |
 | 47984–48010 | Sunshine | Tailscale interface only (firewall) |
 | 40000–40100/udp | Moonlight Web WebRTC | Tailscale interface only |
-| 1024–32767 | your localhost-only servers | same port (tailnet), via `tailnet-ports` (Caddy) |
+| 1024–32767 | your localhost-only servers | same port, HTTPS (tailnet), via `tailnet-ports` (Caddy) |
 | any | `demo PORT` | `:8443` (**public**, while running) |
 
 ## Performance

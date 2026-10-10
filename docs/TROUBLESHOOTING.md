@@ -67,12 +67,14 @@ That's Steam Big Picture. `config/sunshine/apps.json` keeps only *Desktop*.
 The command ttyd runs is failing. Check `journalctl --user -u web-terminal` for
 `execvp failed`; the launcher is `~/.local/share/web-terminal/run.sh`.
 
-### A dev server isn't reachable at `http://<host>:PORT`
+### A dev server isn't reachable at `https://<host>.ts.net:PORT`
 
 Localhost-only servers are forwarded within ~10 s; check `journalctl --user -u tailnet-ports`
-(ports above 32767 and those in `~/.config/tailnet-ports/skip` are left out). A server on
-`0.0.0.0` isn't proxied, so apps with host checks (Vite `allowedHosts`, Django
-`ALLOWED_HOSTS`) see `<host>` there: run them on localhost instead, or allow `<host>`.
+(ports above 32767 and those in `~/.config/tailnet-ports/skip` are left out). Use the full
+`.ts.net` name with `https://`: plain `http://` gets "Client sent an HTTP request to an
+HTTPS server". A server on `0.0.0.0` isn't proxied (it's at `http://<host>:PORT`), so apps
+with host checks (Vite `allowedHosts`, Django `ALLOWED_HOSTS`) reject it there: run them
+on localhost instead.
 
 ### VS Code's "Open in Browser" gives a 404
 

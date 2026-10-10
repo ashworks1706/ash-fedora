@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Make servers you start on localhost reachable from your tailnet at http://<host>:PORT.
+"""Make servers you start on localhost reachable from your tailnet at https://<host>.ts.net:PORT.
 
 Run by tailnet-ports.service. Every 5 s, a TCP port (1024-32767) that one of your
 processes listens on at 127.0.0.1/::1 only gets a Caddy proxy on the laptop's Tailscale
-addresses, same port; it goes away once the server stops. The proxy hands requests to
+addresses, same port, with HTTPS from Tailscale's certificate (like the other remote
+services); it goes away once the server stops. The proxy hands requests to
 the app as localhost:PORT (Host and Origin rewritten, redirects mapped back), so apps
 that only trust localhost (loupe, Vite, Django, Jupyter) work too. Servers on 0.0.0.0
 are already reachable (tailscale0 is a trusted firewall zone) and are left alone, as
@@ -74,13 +75,24 @@ def local_servers():
     return out
 
 
-def caddy_config(servers, tailnet_ips):
+def tailnet():
+    """(this machine's .ts.net name, its Tailscale IPs), or (None, []) if tailscale is down."""
+    try:
+        me = json.loads(run("tailscale", "status", "--json").stdout or "{}").get("Self", {})
+    except (subprocess.TimeoutExpired, ValueError):
+        return None, []
+    return (me.get("DNSName") or "").rstrip(".") or None, me.get("TailscaleIPs") or []
+
+
+def caddy_config(servers, name, ips):
+    """One HTTPS server per port on the Tailscale IPs, with the machine's Tailscale
+    certificate (Caddy fetches it from tailscaled for .ts.net names)."""
     def proxy(port, addr):
         local = f"localhost:{port}"
         return {
-            "listen": [f"{ip}:{port}" if "." in ip else f"[{ip}]:{port}" for ip in tailnet_ips],
-            "automatic_https": {"disable": True},
-            "routes": [{"handle": [{
+            "listen": [f"{ip}:{port}" if "." in ip else f"[{ip}]:{port}" for ip in ips],
+            "automatic_https": {"disable_redirects": True},
+            "routes": [{"match": [{"host": [name]}], "handle": [{
                 "handler": "reverse_proxy",
                 "upstreams": [{"dial": f"{addr}:{port}"}],
                 "headers": {
@@ -89,7 +101,7 @@ def caddy_config(servers, tailnet_ips):
                                                         "replace": f"http://{local}"}]}},
                     "response": {"replace": {"Location": [{
                         "search_regexp": f"^https?://(localhost|127\\.0\\.0\\.1|\\[::1\\]):{port}",
-                        "replace": "http://{http.request.hostport}"}]}},
+                        "replace": "https://{http.request.hostport}"}]}},
                 },
             }]}],
         }
@@ -98,38 +110,38 @@ def caddy_config(servers, tailnet_ips):
             "apps": {"http": {"servers": {f"p{p}": proxy(p, a) for p, a in servers.items()}}}}
 
 
-def apply(servers, tailnet_ips):
+def apply(servers, name, ips):
     os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
     with open(CONFIG, "w") as f:
-        json.dump(caddy_config(servers, tailnet_ips), f, indent=1)
+        json.dump(caddy_config(servers, name, ips), f, indent=1)
     return run("caddy", "reload", "--config", CONFIG).returncode == 0
 
 
 def main():
     os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
     with open(CONFIG, "w") as f:
-        json.dump(caddy_config({}, []), f)
+        json.dump(caddy_config({}, None, []), f)
     caddy = subprocess.Popen(["caddy", "run", "--config", CONFIG])
-    current, seen = ({}, []), set()               # (proxied, tailnet IPs) / listening last pass
+    current, seen = ({}, None, []), set()         # (proxied, name, IPs) / listening last pass
     try:
         while caddy.poll() is None:
             time.sleep(EVERY)
             if os.path.exists(os.path.expanduser("~/.config/remote-off")):
                 continue
             skip = reserved()
-            tailnet_ips = run("tailscale", "ip").stdout.split()
-            if skip is None or not tailnet_ips:
+            name, ips = tailnet()
+            if skip is None or not name or not ips:
                 continue
             servers = local_servers()
             # Wait for a second sighting so short-lived ports (OAuth callbacks) are skipped.
             wanted = {p: a for p, a in servers.items() if p in seen and p not in skip}
             seen = set(servers)
-            if (wanted, tailnet_ips) != current and apply(wanted, tailnet_ips):
+            if (wanted, name, ips) != current and apply(wanted, name, ips):
                 for p in sorted(current[0].keys() - wanted.keys()):
                     print(f"removed :{p}", flush=True)
                 for p in sorted(wanted.keys() - current[0].keys()):
                     print(f"serving :{p} -> {wanted[p]}:{p}", flush=True)
-                current = (wanted, tailnet_ips)
+                current = (wanted, name, ips)
     finally:
         caddy.terminate()
 

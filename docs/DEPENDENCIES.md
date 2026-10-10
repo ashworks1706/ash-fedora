@@ -28,7 +28,7 @@ name `gdrive`, credentials stay in `~/.config/rclone/rclone.conf`).
 | `code-server` | GitHub release RPM | VS Code in the browser |
 | moonlight-web-stream | GitHub release (checksum-verified) | desktop in the browser |
 | `ttyd` | Fedora | terminal in the browser |
-| `caddy` | Fedora | `tailnet-ports`: your localhost servers at `http://<host>:PORT` |
+| `caddy` | Fedora | `tailnet-ports`: your localhost servers at `https://<host>.ts.net:PORT` |
 | `nodejs-npm` | Fedora | building the dashboard |
 | `python3-psutil` | Fedora | dashboard metrics |
 | `remmina`, `remmina-plugins-vnc` | Fedora | viewing a Mac's screen (macOS Screen Sharing) |
