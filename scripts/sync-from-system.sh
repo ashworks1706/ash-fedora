@@ -58,6 +58,7 @@ for f in inject.html make-index.sh run.sh; do   # not index.html (built) or font
   copy "$HOME/.local/share/web-terminal/$f" "share/web-terminal/$f"
 done
 copy "$HOME/.local/share/applications/open-url.desktop" share/applications/open-url.desktop
+copy "$HOME/.local/share/code-server/Machine/settings.json" share/code-server/Machine/settings.json
 # code-server's config.yaml holds the password: only a template lives in the repo.
 for bin in start-hyprland kitty-tmux t tmux-server-start demo remote-off remote-on internal-mic-quality notify \
            sunshine-run asu-vpn open-url tailnet-ports; do

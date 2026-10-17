@@ -65,6 +65,22 @@ limg() {  # send the clipboard image to the laptop; copies its path for Cmd+V
 }
 ```
 
+## VS Code in the browser: closing the tab
+
+A browser tab *is* the VS Code window, so a closed tab can't be reattached; reopening it
+starts a new window in about a second, on the last folder. What carries over:
+
+- **Terminals** keep running and reconnect with their processes and recent output.
+- **Open editors, layout and unsaved edits** are restored.
+- **Extensions restart.** Anything running inside one stops, including Claude Code or
+  Codex *panel* chats (their history stays; resume it). Run long agent work in a terminal
+  (`claude` in tmux, or [Remote Control](#claude-code-from-anywhere)) instead.
+
+Closing the tab asks first ("Leave site?"), so it doesn't happen by accident. A window
+that only *disconnects* (the Mac sleeps, Wi-Fi drops) resumes exactly as it was, extensions
+included, for up to 7 days (`reconnection-grace-time` in `~/.config/code-server/config.yaml`).
+code-server-only settings live in `~/.local/share/code-server/Machine/settings.json`.
+
 ## Your own servers
 
 Anything you start on the laptop on localhost (the default for Vite, Next.js, uvicorn,

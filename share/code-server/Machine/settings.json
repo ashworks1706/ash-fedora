@@ -1,0 +1,9 @@
+{
+  // code-server only (desktop VS Code doesn't read this file)
+  // Unsaved edits survive closing the tab
+  "files.hotExit": "onExitAndWindowClose",
+  // Terminals come back with their processes after the tab is reopened
+  "terminal.integrated.enablePersistentSessions": true,
+  "terminal.integrated.persistentSessionReviveProcess": "onExitAndWindowClose",
+  "terminal.integrated.persistentSessionScrollback": 1000
+}

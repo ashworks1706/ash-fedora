@@ -47,6 +47,7 @@ declare -A FILES=(
   [share/web-terminal/make-index.sh]="$SHARE/web-terminal/make-index.sh"
   [share/web-terminal/run.sh]="$SHARE/web-terminal/run.sh"
   [share/applications/open-url.desktop]="$SHARE/applications/open-url.desktop"
+  [share/code-server/Machine/settings.json]="$SHARE/code-server/Machine/settings.json"
 )
 for unit in "$REPO_ROOT"/config/systemd/user/*.service; do
   FILES[config/systemd/user/$(basename "$unit")]="$XDG_CONFIG_HOME/systemd/user/$(basename "$unit")"
