@@ -49,6 +49,7 @@ for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quali
   copy "$CFG/systemd/user/$unit.service" "config/systemd/user/$unit.service"
 done
 copy "$CFG/systemd/user/code-server.service.d/priority.conf" config/systemd/user/code-server.service.d/priority.conf
+copy "$CFG/systemd/user/code-server.service.d/python-tools.conf" config/systemd/user/code-server.service.d/python-tools.conf
 copy "$CFG/ntfy/server.yml"              config/ntfy/server.yml          # not ntfy/env or client.env (secrets)
 copy "$CFG/llm/llama-swap.yaml"           config/llm/llama-swap.yaml      # not llm/env (API key)
 copy "$CFG/sunshine/sunshine.conf"       config/sunshine/sunshine.conf   # not sunshine_state.json (credentials, pairings)
@@ -61,7 +62,7 @@ copy "$HOME/.local/share/applications/open-url.desktop" share/applications/open-
 copy "$HOME/.local/share/code-server/Machine/settings.json" share/code-server/Machine/settings.json
 # code-server's config.yaml holds the password: only a template lives in the repo.
 for bin in start-hyprland kitty-tmux t tmux-server-start demo remote-off remote-on internal-mic-quality notify \
-           sunshine-run asu-vpn open-url tailnet-ports; do
+           sunshine-run asu-vpn open-url tailnet-ports code-server-python-tools; do
   copy "$HOME/.local/bin/$bin" "local-bin/$bin"
 done
 

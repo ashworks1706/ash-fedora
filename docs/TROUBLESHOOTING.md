@@ -82,6 +82,15 @@ The tab is on an old address; code-server lives at `https://<host>.ts.net:8444`.
 Its `/proxy/PORT/` also breaks apps that load assets from `/`; open
 `https://<host>.ts.net:PORT` instead.
 
+### Python in VS Code (browser): "Select Python Interpreter", no completions
+
+code-server installs extensions from Open VSX, whose `ms-python.python` lacks the
+interpreter finder (`pet`: `spawn …/pet ENOENT` in the Python Environments log), and
+Pylance only runs in Microsoft's VS Code. `code-server-python-tools` (run before every
+code-server start) copies `pet` from desktop VS Code's Python extension, and code-server
+uses basedpyright for completions (`~/.local/share/code-server/Machine/settings.json`).
+After a Python extension update, restart code-server from the dashboard.
+
 ### `demo PORT` link doesn't load for others
 
 A first-time Funnel name can take up to ~10 minutes to appear in public DNS. Test from

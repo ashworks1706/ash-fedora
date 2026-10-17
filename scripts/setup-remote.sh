@@ -27,6 +27,9 @@ if ! command -v code-server >/dev/null; then
   sudo dnf install -y --nogpgcheck "$tmp/code-server.rpm"   # upstream doesn't sign its RPMs
   rm -rf "$tmp"
 fi
+# Python: Pylance doesn't run in code-server; basedpyright is the open-source equivalent
+code-server --install-extension ms-python.python --install-extension detachhead.basedpyright >/dev/null
+"$HOME/.local/bin/code-server-python-tools"
 
 step "3. Moonlight Web (desktop in the browser), checksum-verified"
 if [[ ! -x "$SHARE/moonlight-web/package/web-server" ]]; then

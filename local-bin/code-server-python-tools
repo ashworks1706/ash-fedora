@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Open VSX ships ms-python.python only as a "universal" build without
+# python-env-tools (pet), so code-server can't find interpreters. Copy pet from
+# desktop VS Code's linux-x64 build into every code-server copy that lacks it.
+set -u
+src=$(ls -d "$HOME"/.vscode/extensions/ms-python.python-*-linux-x64/python-env-tools 2>/dev/null | sort -V | tail -1)
+[ -n "$src" ] || { echo "no desktop ms-python.python with pet; install it in VS Code" >&2; exit 0; }
+for ext in "$HOME"/.local/share/code-server/extensions/ms-python.python-*; do
+  [ -x "$ext/python-env-tools/bin/pet" ] || cp -a "$src" "$ext/"
+done

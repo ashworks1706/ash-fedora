@@ -5,5 +5,10 @@
   // Terminals come back with their processes after the tab is reopened
   "terminal.integrated.enablePersistentSessions": true,
   "terminal.integrated.persistentSessionReviveProcess": "onExitAndWindowClose",
-  "terminal.integrated.persistentSessionScrollback": 1000
+  "terminal.integrated.persistentSessionScrollback": 1000,
+  // Python: Pylance only runs in Microsoft's VS Code; basedpyright is its open-source
+  // equivalent (completions, hover, go-to, type checks at Pylance's "standard" level)
+  "python.languageServer": "None",
+  "basedpyright.analysis.typeCheckingMode": "standard",
+  "python.defaultInterpreterPath": "/usr/bin/python3"
 }
