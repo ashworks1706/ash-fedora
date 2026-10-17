@@ -19,6 +19,8 @@ Environment=WEBRTC_NAT_1TO1_HOST=__TS_IP__
 Environment=DISABLE_DEFAULT_WEBRTC_ICE_SERVERS=true
 Restart=on-failure
 RestartSec=5
+# /etc/systemd/user.conf allows only 5 s to stop; it can need longer and then dumps core.
+TimeoutStopSec=20
 
 [Install]
 WantedBy=default.target

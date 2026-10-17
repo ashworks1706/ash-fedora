@@ -11,6 +11,7 @@ run sudo systemctl enable --now tailscaled
 [ $DRY = 1 ] || sleep 2
 run tailscale up
 run systemctl --user enable --now code-server moonlight-web dashboard-api taildrop-receive web-terminal llama-swap ntfy tailnet-ports
+[ -f "$HOME/.config/systemd/user/claude-remote.service" ] && run systemctl --user enable --now claude-remote
 run tailscale serve --bg --https=443 "$HOME/.local/share/dashboard"
 run tailscale serve --bg --https=443 --set-path /api http://127.0.0.1:8095
 run tailscale serve --bg --https=8444 http://127.0.0.1:8080

@@ -8,6 +8,7 @@ export type Service = {
   desc: string;
   port: number | null;
   local: number | null;
+  url?: string | null;   // set when the service is opened somewhere other than its port
   public: boolean;
   active: boolean;
 };

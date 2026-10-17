@@ -20,7 +20,7 @@ function SectionHead({ id, title, hint }: { id?: string; title: string; hint?: s
 
 function ServiceCard({ s, onChange }: { s: Service; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
-  const url = s.port ? `https://${host()}:${s.port}` : null;
+  const url = s.url ?? (s.port ? `https://${host()}:${s.port}` : null);
   const toggle = async () => {
     const action = s.active ? "stop" : "start";
     if (action === "stop" && !confirm(`Stop ${s.name}?`)) return;
@@ -35,7 +35,7 @@ function ServiceCard({ s, onChange }: { s: Service; onChange: () => void }) {
         <span className="card-title"><span className={`dot ${s.active ? live : ""}`} />{s.name}</span>
         {s.public ? <span className="badge public">public</span>
           : s.port ? <span className="badge mono">:{s.port}</span>
-          : <span className="badge">{s.id === "sunshine" ? "Moonlight app" : "background"}</span>}
+          : <span className="badge">{s.id === "sunshine" ? "Moonlight app" : s.id === "claude" ? "Claude app" : "background"}</span>}
       </div>
       <div className="card-desc">{s.desc}</div>
       <div className="card-foot">

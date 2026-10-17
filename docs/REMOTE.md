@@ -26,6 +26,7 @@ Pair Moonlight (iPhone app) and Moonlight Web once via Sunshine's web UI at
 | `https://<host>.ts.net:PORT` | Any server you run on the laptop on localhost (`npm run dev`, a Python app), forwarded automatically |
 | Moonlight app → `<host>` | Full desktop, lowest latency |
 | `ssh -t <user>@<host> t` | Pick a tmux session (same ones as on the laptop) |
+| Claude app / `claude.ai/code` → `<host>` | Claude Code on the laptop ([Remote Control](#claude-code-from-anywhere)) |
 | `https://<host>.ts.net:8443` | **Public** link while `demo PORT` runs |
 
 ## Commands (installed to `~/.local/bin`)
@@ -96,6 +97,26 @@ don't need this step.
 Not covered: apps that sign in inside their own window, like the ASU VPN (Cisco). Use
 `asu-vpn on` and finish in Desktop.
 
+## Claude Code from anywhere
+
+`claude-remote.service` keeps Claude Code's Remote Control running on the laptop. In the
+Claude iPhone app or at `claude.ai/code` on the Mac, pick the **`<host>`** environment and
+start a session: it runs on the laptop with your files, shell, `tailscale`, `systemctl`,
+projects and local models, the same as Claude Code in kitty.
+
+- **Nothing is exposed:** the laptop connects out to Anthropic; no port, no Funnel, no
+  Tailscale needed on the phone. Access is your Claude account.
+- **You approve risky actions** from the app (default permission mode). Change it with
+  `--permission-mode` in the unit if you want fewer prompts.
+- Sessions start in `~/projects` (Claude Code never trusts `~` itself) and can work anywhere.
+- Turn on once: `systemctl --user enable --now claude-remote` (or the dashboard's
+  **Claude Code** card). `remote-off` stops it with the rest; logs:
+  `journalctl --user -u claude-remote`.
+
+A Tailscale MCP server isn't used: those manage the tailnet (devices, ACLs) rather than the
+machine, and the Claude app calls connectors from Anthropic's servers, which can't reach
+tailnet-only addresses. Claude Code on the laptop already has the `tailscale` CLI.
+
 ## How it fits together
 
 - **Tailscale** (system service) carries everything: SSH, Taildrop, `serve` for HTTPS.
@@ -134,12 +155,8 @@ The remote stack is built to cost almost nothing when you aren't using it:
 - **Priorities:** background services run with lower CPU/IO weight and soft memory caps
   (`MemoryHigh`), so they yield to the desktop. tmux and Sunshine keep normal priority.
 - **Logs:** ttyd and Moonlight Web log warnings only; the journal is capped at 500 MB.
-- **Idle auto-stop:** VS Code, Terminal and Desktop stop on their own after 30 minutes
-  with no browser tab connected (an open tab counts as in use; so does a Desktop stream).
-  Start them again from the dashboard; tmux sessions, Sunshine and the dashboard keep
-  running. Change the time with `{"minutes": 60}` in `~/.config/dashboard/autostop.json`
-  (`0` turns it off); there's an "Idle auto-stop" alert switch on the dashboard.
-- **Stop what you don't use** from the dashboard; `remote-off` stops everything.
+- Everything stays running until you stop it; **stop what you don't use** from the
+  dashboard, or `remote-off` to stop everything.
 
 ## Keeping the repo in sync
 

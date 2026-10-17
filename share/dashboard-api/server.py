@@ -127,6 +127,9 @@ SERVICES = {
                  "desc": "ntfy: pushes alerts and notify messages to your phone and browsers"},
     "drive":    {**unit("gdrive-mount.service"), "name": "Google Drive", "port": None, "local": None,
                  "desc": "rclone mount of your Google Drive at ~/GoogleDrive"},
+    "claude":   {**unit("claude-remote.service"), "name": "Claude Code", "port": None, "local": None,
+                 "url": "https://claude.ai/code",
+                 "desc": "Remote Control: Claude Code sessions on the laptop from the Claude app or claude.ai/code"},
     "sunshine": {"status": sunshine_active, "act": sunshine_action, "name": "Sunshine",
                  "port": None, "local": 47989,
                  "desc": "Streams the screen to Moonlight apps and Desktop (AMD VAAPI)"},
@@ -138,7 +141,7 @@ SERVICES = {
 
 def services_view():
     return [{"id": k, "name": v["name"], "desc": v["desc"], "port": v["port"], "local": v["local"],
-             "public": v.get("public", False), "active": v["status"]()} for k, v in SERVICES.items()]
+             "url": v.get("url"), "public": v.get("public", False), "active": v["status"]()} for k, v in SERVICES.items()]
 
 
 # ---------------------------------------------------------------- metrics sampler
@@ -489,10 +492,9 @@ NOTIFY_EVENTS = [  # key, default, label, description
     ("ssh", True, "SSH login", "Someone signed in over Tailscale SSH"),
     ("taildrop", True, "File received", "A file arrived via Taildrop"),
     ("model", False, "AI model", "A model loaded on the GPU or unloaded"),
-    ("autostop", True, "Idle auto-stop", "VS Code, Terminal or Desktop was stopped after nobody used it"),
 ]
 WATCHED_UNITS = ["tmux", "web-terminal", "code-server", "moonlight-web", "llama-swap",
-                 "hermes-gateway", "taildrop-receive", "ntfy", "gdrive-mount", "tailnet-ports"]
+                 "hermes-gateway", "taildrop-receive", "ntfy", "gdrive-mount", "tailnet-ports", "claude-remote"]
 _recent = collections.deque(maxlen=25)
 
 
@@ -657,53 +659,6 @@ def notifier():
                               ", ".join(sorted(added or removed)), "low", "robot", dash, "model")
         state["models"] = loaded
         last = now
-
-
-# ---------------------------------------------------------------- idle auto-stop
-
-AUTOSTOP = ["vscode", "terminal", "desktop"]   # browser services; each has a "local" port
-AUTOSTOP_SETTINGS = os.path.expanduser("~/.config/dashboard/autostop.json")
-AUTOSTOP_MINUTES = 30
-AUTOSTOP_CHECK = 60       # seconds
-
-
-def autostop_minutes():
-    """Idle minutes before a browser service is stopped; 0 turns auto-stop off."""
-    try:
-        with open(AUTOSTOP_SETTINGS) as f:
-            return max(0, int(json.load(f).get("minutes", AUTOSTOP_MINUTES)))
-    except (OSError, ValueError, TypeError, AttributeError):
-        return AUTOSTOP_MINUTES
-
-
-def in_use(sid):
-    """An open tab keeps a websocket to the local port (via `tailscale serve`).
-    A Desktop stream sends video over WebRTC, but runs a `streamer` process meanwhile."""
-    port = SERVICES[sid]["local"]
-    if any(c.status == psutil.CONN_ESTABLISHED and c.laddr.port == port
-           for c in psutil.net_connections("tcp")):
-        return True
-    return sid == "desktop" and any(p.info["name"] == "streamer" for p in psutil.process_iter(["name"]))
-
-
-def autostopper():
-    """Stop VS Code, Terminal and Desktop once nothing has been connected for the idle
-    time. Start them again from the dashboard (tmux sessions and Sunshine keep running)."""
-    idle_since = {}
-    while True:
-        time.sleep(AUTOSTOP_CHECK)
-        minutes, now = autostop_minutes(), time.time()
-        for sid in AUTOSTOP:
-            if not minutes or not SERVICES[sid]["status"]() or in_use(sid):
-                idle_since.pop(sid, None)
-                continue
-            if now - idle_since.setdefault(sid, now) >= minutes * 60:
-                idle_since.pop(sid)
-                if SERVICES[sid]["act"]("stop"):
-                    name = SERVICES[sid]["name"]
-                    send_notification(f"{name} stopped", f"Nobody used {name} for {minutes} minutes. "
-                                      "Start it again from the dashboard.", "low", "zzz",
-                                      f"https://{HOST}", "autostop")
 
 
 def ntfy_history(limit=8):
@@ -893,5 +848,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     threading.Thread(target=sampler, daemon=True).start()
     threading.Thread(target=notifier, daemon=True).start()
-    threading.Thread(target=autostopper, daemon=True).start()
     ThreadingHTTPServer(BIND, Handler).serve_forever()

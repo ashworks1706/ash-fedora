@@ -1,0 +1,21 @@
+[Unit]
+Description=Claude Code Remote Control (sessions from the Claude app / claude.ai/code)
+After=network-online.target
+
+[Service]
+# Workspace must be a trusted folder (home never is); sessions can still reach all of ~.
+WorkingDirectory=%h/projects
+# Boot happens before Hyprland exports a PATH; sessions need the usual tools.
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:%h/.npm-global/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/claude remote-control --name %H --permission-mode default
+# stdout is a redrawn status screen; errors still reach the journal.
+StandardInput=null
+StandardOutput=null
+Restart=always
+RestartSec=10
+# /etc/systemd/user.conf defaults both to 5 s.
+TimeoutStartSec=90
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
