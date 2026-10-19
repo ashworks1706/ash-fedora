@@ -36,6 +36,8 @@ backup_file() {
 declare -A FILES=(
   [config/kitty/kitty.conf]="$XDG_CONFIG_HOME/kitty/kitty.conf"
   [config/fish/conf.d/hyprland-autostart.fish]="$XDG_CONFIG_HOME/fish/conf.d/hyprland-autostart.fish"
+  [config/fish/conf.d/llm-keys.fish]="$XDG_CONFIG_HOME/fish/conf.d/llm-keys.fish"
+  [config/opencode/opencode.json]="$XDG_CONFIG_HOME/opencode/opencode.json"
   [home/.tmux.conf]="$HOME/.tmux.conf"
   [config/systemd/user/code-server.service.d/priority.conf]="$XDG_CONFIG_HOME/systemd/user/code-server.service.d/priority.conf"
   [config/systemd/user/code-server.service.d/python-tools.conf]="$XDG_CONFIG_HOME/systemd/user/code-server.service.d/python-tools.conf"

@@ -97,6 +97,21 @@ aliases use `base_url: http://127.0.0.1:8100/v1`, with the key supplied by a
 Hermes requires at least 64K context, which is why `qwen3.5-4b` runs 64K per slot.
 Test: `hermes -m qwen -z "say hi"`.
 
+## opencode (ASU Air)
+
+`config/opencode/opencode.json` points opencode at ASU Research Computing's ASU Air API
+(`https://openai.rc.asu.edu/v1`, 38 models). Generated at voyager.rc.asu.edu, profile → opencode.
+
+- **Agents:** `assistant` (default, `glm-5-3-flash`, asks before shell commands) and
+  `reviewer` (subagent, `deepseek-v4-1-flash`, read-only). Thinking level: `ctrl+t`.
+- **Key:** `ASU_AIR_API_KEY`, loaded by fish (`conf.d/llm-keys.fish`) and bash from
+  `~/.config/llm/asu-air.env` (mode 600, never in the repo). Create it with:
+  `printf 'ASU_AIR_API_KEY=%s\n' sk_... > ~/.config/llm/asu-air.env && chmod 600 ~/.config/llm/asu-air.env`
+- opencode 2.0 ignores an agent's `model` for the session's starting model, so the file
+  also sets the top-level `"model": "asu/glm-5-3-flash"`.
+- opencode keeps a background server (`opencode serve --service`) that reads the config
+  once; after editing the config or the key, run `opencode service restart` (or kill it).
+
 ## Training on the GPU
 
 Chat models unload after 10 minutes idle. To free the GPU right away: **Unload all** on

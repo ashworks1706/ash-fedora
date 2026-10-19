@@ -42,6 +42,8 @@ copy "$CFG/quickshell"                   config/quickshell
 copy "$CFG/illogical-impulse/config.json" config/illogical-impulse/config.json  # never google-calendar/
 copy "$CFG/kitty/kitty.conf"             config/kitty/kitty.conf
 copy "$CFG/fish/conf.d/hyprland-autostart.fish" config/fish/conf.d/hyprland-autostart.fish
+copy "$CFG/fish/conf.d/llm-keys.fish"          config/fish/conf.d/llm-keys.fish
+copy "$CFG/opencode/opencode.json"         config/opencode/opencode.json   # key comes from ~/.config/llm/asu-air.env
 copy "$HOME/.tmux.conf"                  home/.tmux.conf
 
 echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"

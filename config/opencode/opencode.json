@@ -1,0 +1,689 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "logLevel": "INFO",
+  "default_agent": "assistant",
+  "model": "asu/glm-5-3-flash",
+  "share": "manual",
+  "autoupdate": "notify",
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 2000
+  },
+  "permission": {
+    "read": "allow",
+    "list": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "codesearch": "allow",
+    "todoread": "allow",
+    "question": "allow",
+    "bash": "allow",
+    "edit": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": "deny"
+  },
+  "provider": {
+    "asu": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "ASU Air",
+      "options": {
+        "baseURL": "https://openai.rc.asu.edu/v1",
+        "apiKey": "{env:ASU_AIR_API_KEY}"
+      },
+      "models": {
+        "deepseek-v4-1-flash": {
+          "name": "Deepseek V4 1 Flash",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "devstral2-123b": {
+          "name": "Devstral2 123B"
+        },
+        "gemma4-31b-it": {
+          "name": "Gemma4 31B IT",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "glm-5-2": {
+          "name": "Glm 5 2",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "glm-5-3": {
+          "name": "Glm 5 3",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "glm-5-3-flash": {
+          "name": "Glm 5 3 Flash",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "glm-5-3-spec": {
+          "name": "Glm 5 3 Spec",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "gpt-oss-120b": {
+          "name": "GPT OSS 120B",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "granite41-30b": {
+          "name": "Granite41 30B"
+        },
+        "hemmingway-1": {
+          "name": "Hemmingway 1",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "inkling-small": {
+          "name": "Inkling Small",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "kimi-k2-7-code": {
+          "name": "Kimi K2 7 Code"
+        },
+        "laguna-s-2-1": {
+          "name": "Laguna S 2 1",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "llama3-groq-70b-tool-use": {
+          "name": "Llama3 Groq 70B Tool Use"
+        },
+        "llama4-maverick-17b": {
+          "name": "Llama4 Maverick 17B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "llama4-scout-17b": {
+          "name": "Llama4 Scout 17B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "mimo-v2-6-flash": {
+          "name": "Mimo V2 6 Flash",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "minimax-m2-7": {
+          "name": "Minimax M2 7"
+        },
+        "minimax-m3": {
+          "name": "Minimax M3",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "muse-glimmer-30b": {
+          "name": "Muse Glimmer 30B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "north-mini-code": {
+          "name": "North Mini Code",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "north-mini-code-glm": {
+          "name": "North Mini Code Glm",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "olmo3-32b": {
+          "name": "Olmo3 32B",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "olmo3-7b": {
+          "name": "Olmo3 7B",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "ornith-1-5-35b-a3b": {
+          "name": "Ornith 1 5 35B A3b",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen-agentworld-35b-a3b": {
+          "name": "Qwen Agentworld 35B A3b",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen3-235b-a22b": {
+          "name": "Qwen3 235B A22b",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen3-30b-a3b": {
+          "name": "Qwen3 30B A3b",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen3-coder-30b-a3b-instruct": {
+          "name": "Qwen3 Coder 30B A3b Instruct"
+        },
+        "qwen3-coder-next": {
+          "name": "Qwen3 Coder Next"
+        },
+        "qwen3-vl-32b": {
+          "name": "Qwen3 VL 32B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen35-122b-a10b": {
+          "name": "Qwen35 122B A10b",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen35-27b": {
+          "name": "Qwen35 27B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen35-397b-a17b": {
+          "name": "Qwen35 397B A17b",
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen36-27b": {
+          "name": "Qwen36 27B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen36-35b-a3b": {
+          "name": "Qwen36 35B A3b",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "qwen38-27b": {
+          "name": "Qwen38 27B",
+          "attachment": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "variants": {
+            "none": {
+              "reasoningEffort": "none"
+            },
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "router-classifier-v2": {
+          "name": "Router Classifier V2"
+        }
+      }
+    }
+  },
+  "agent": {
+    "assistant": {
+      "model": "asu/glm-5-3-flash",
+      "mode": "primary",
+      "description": "General coding assistant — reads, writes, and runs code with your approval",
+      "prompt": "You are a careful, capable coding assistant. Understand the existing code before changing it. Make the smallest change that solves the problem, explain what you changed and why, and verify your work when possible. Ask before doing anything destructive. When a task is large, outline your plan briefly before starting. When you finish a significant piece of work, offer to have it reviewed by the reviewer subagent.",
+      "temperature": 1,
+      "steps": 25,
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "ask",
+        "codesearch": "allow",
+        "lsp": "allow",
+        "todowrite": "allow",
+        "todoread": "allow"
+      }
+    },
+    "reviewer": {
+      "model": "asu/deepseek-v4-1-flash",
+      "mode": "subagent",
+      "description": "Code Reviewer — audits changes for correctness, security, and maintainability",
+      "prompt": "You are a thorough, constructive code reviewer. Examine the provided changes for correctness (edge cases, error handling), security (input validation, injection, secret handling), and maintainability (clarity, consistency with the surrounding code). Respond in a structured format: return STATUS: APPROVED if the changes are sound, otherwise return STATUS: REJECTED with explicit, actionable bullet points detailing what must be fixed.",
+      "temperature": 1,
+      "steps": 10,
+      "permission": {
+        "read": "allow",
+        "edit": "deny",
+        "bash": "deny",
+        "codesearch": "allow",
+        "grep": "allow"
+      }
+    }
+  }
+}
