@@ -12,7 +12,7 @@ home/.claude/
 
 ## Skills
 
-All are vendored unchanged from their upstream (minus Codex-only `agents/` folders), with the upstream license in each folder. `technical-writing` is the exception: it's my own, made project-neutral.
+All are vendored unchanged from their upstream (minus Codex-only `agents/` folders), with the upstream license in each folder. `technical-writing` and `write-report` are the exceptions: they're my own (from asusoda/platform and arc-lab), made project-neutral.
 
 | Skill | What it's for | Source | License |
 |---|---|---|---|
@@ -27,6 +27,7 @@ All are vendored unchanged from their upstream (minus Codex-only `agents/` folde
 | `better-accessibility` | Keyboard, focus, ARIA, WCAG 2.2 | jakubkrehel/skills | MIT |
 | `interface-review` | Interface problems a diff or PR introduced | jakubkrehel/skills | MIT |
 | `technical-writing` | Docs and comments in Simplified Technical English | this repo | MIT |
+| `write-report` | Honest results write-ups: every number and citation sourced, measured vs suggested | this repo | MIT |
 | `unslop` | Remove AI tells from a draft (run with `/unslop`) | [cursor/plugins](https://github.com/cursor/plugins) | MIT |
 | `writing-for-agents` | Writing skills, CLAUDE.md and AGENTS.md | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT |
 | `show-me` | Explain the current topic visually (run with `/show-me`) | [humanlayer/skills](https://github.com/humanlayer/skills) | MIT |
