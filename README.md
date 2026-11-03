@@ -19,7 +19,7 @@ remote-access packages are separate, opt-in steps.
 | **Notifications** | Self-hosted ntfy pushes alerts to your phone and browsers: unplugged, crashes, disk, heat, SSH logins, file arrivals, plus `notify` for your own jobs. [Guide](docs/NOTIFY.md) |
 | **Dashboard** | A Next.js home page for the machine: services with start/stop, live CPU/GPU/memory/network/thermal graphs, processes, sessions, devices. [Details](dashboard/README.md) |
 | **Laptop tweaks** | Lid closed on AC stays awake, auto-login to a locked desktop, backlight fix, journal cap |
-| **Claude Code** | One global [CLAUDE.md](home/.claude/CLAUDE.md) and 20 skills for design, writing, diagrams and debugging, installed to `~/.claude`. [Details](docs/CLAUDE.md) |
+| **Claude Code** | One global [CLAUDE.md](home/.claude/CLAUDE.md) and 24 skills for design, writing, diagrams, code organization and debugging, installed to `~/.claude`. [Details](docs/CLAUDE.md) |
 | **Tooling** | Installer with backups and rollback, health check, one-command sync back into this repo with secret scanning |
 
 ## Quick start
