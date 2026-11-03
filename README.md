@@ -19,6 +19,7 @@ remote-access packages are separate, opt-in steps.
 | **Notifications** | Self-hosted ntfy pushes alerts to your phone and browsers: unplugged, crashes, disk, heat, SSH logins, file arrivals, plus `notify` for your own jobs. [Guide](docs/NOTIFY.md) |
 | **Dashboard** | A Next.js home page for the machine: services with start/stop, live CPU/GPU/memory/network/thermal graphs, processes, sessions, devices. [Details](dashboard/README.md) |
 | **Laptop tweaks** | Lid closed on AC stays awake, auto-login to a locked desktop, backlight fix, journal cap |
+| **Claude Code** | One global [CLAUDE.md](home/.claude/CLAUDE.md) and 19 skills for design, writing, diagrams and debugging, installed to `~/.claude`. [Details](docs/CLAUDE.md) |
 | **Tooling** | Installer with backups and rollback, health check, one-command sync back into this repo with secret scanning |
 
 ## Quick start
@@ -58,6 +59,7 @@ config/              → ~/.config
   sunshine/            stream host settings (AMD VAAPI encoder)
   code-server/         config template (password generated per machine)
 home/.tmux.conf      → ~/.tmux.conf
+home/.claude/        → ~/.claude          Claude Code: global CLAUDE.md and skills
 local-bin/           → ~/.local/bin      t, kitty-tmux, demo, notify, remote-on/off, start-hyprland, …
 share/               → ~/.local/share    dashboard API, web terminal page and launcher
 system/              → /                 lid, auto-login, backlight, journald (install-system.sh)
@@ -72,6 +74,7 @@ docs/                  guides
 |---|---|
 | [docs/REMOTE.md](docs/REMOTE.md) | Remote access: addresses, commands, how the pieces fit, performance |
 | [docs/NOTIFY.md](docs/NOTIFY.md) | Notifications: subscribing, `notify`, automatic alerts |
+| [docs/CLAUDE.md](docs/CLAUDE.md) | Claude Code: global rules and the skills it ships, with sources |
 | [docs/AI.md](docs/AI.md) | Local AI server: models, endpoint, pointing projects and Hermes at it |
 | [dashboard/README.md](dashboard/README.md) | Dashboard: build, develop, API reference |
 | [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | Packages each part needs |

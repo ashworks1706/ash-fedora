@@ -39,6 +39,7 @@ declare -A FILES=(
   [config/fish/conf.d/llm-keys.fish]="$XDG_CONFIG_HOME/fish/conf.d/llm-keys.fish"
   [config/opencode/opencode.json]="$XDG_CONFIG_HOME/opencode/opencode.json"
   [home/.tmux.conf]="$HOME/.tmux.conf"
+  [home/.claude/CLAUDE.md]="$HOME/.claude/CLAUDE.md"
   [config/systemd/user/code-server.service.d/priority.conf]="$XDG_CONFIG_HOME/systemd/user/code-server.service.d/priority.conf"
   [config/systemd/user/code-server.service.d/python-tools.conf]="$XDG_CONFIG_HOME/systemd/user/code-server.service.d/python-tools.conf"
   [config/ntfy/server.yml]="$XDG_CONFIG_HOME/ntfy/server.yml"
@@ -66,6 +67,10 @@ done
 for rel in "${!FILES[@]}"; do
   backup_file "${FILES[$rel]}"
 done
+# Claude Code skills: only the ones this repo ships; other skills in ~/.claude/skills stay.
+for skill in "$REPO_ROOT"/home/.claude/skills/*/; do
+  backup_file "$HOME/.claude/skills/$(basename "$skill")"
+done
 
 echo "[2/5] Installing configs"
 mkdir -p "$XDG_CONFIG_HOME"
@@ -76,6 +81,10 @@ install -m 0644 "$REPO_ROOT/config/illogical-impulse/config.json" "$XDG_CONFIG_H
 for rel in "${!FILES[@]}"; do
   mode=0644; [[ "$rel" == *.sh ]] && mode=0755
   install -D -m "$mode" "$REPO_ROOT/$rel" "${FILES[$rel]}"
+done
+for skill in "$REPO_ROOT"/home/.claude/skills/*/; do
+  mkdir -p "$HOME/.claude/skills"
+  rsync -a --delete "$skill" "$HOME/.claude/skills/$(basename "$skill")/"
 done
 
 # code-server: never overwrite an existing config (it holds the password).

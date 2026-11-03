@@ -45,6 +45,10 @@ copy "$CFG/fish/conf.d/hyprland-autostart.fish" config/fish/conf.d/hyprland-auto
 copy "$CFG/fish/conf.d/llm-keys.fish"          config/fish/conf.d/llm-keys.fish
 copy "$CFG/opencode/opencode.json"         config/opencode/opencode.json   # key comes from ~/.config/llm/asu-air.env
 copy "$HOME/.tmux.conf"                  home/.tmux.conf
+copy "$HOME/.claude/CLAUDE.md"           home/.claude/CLAUDE.md
+for skill in home/.claude/skills/*/; do   # only skills the repo already ships
+  copy "$HOME/.claude/skills/$(basename "$skill")" "home/.claude/skills/$(basename "$skill")"
+done
 
 echo "[2/4] Remote access (Tailscale, Sunshine, code-server, dashboard)"
 for unit in tmux moonlight-web dashboard-api taildrop-receive internal-mic-quality web-terminal llama-swap ntfy gdrive-mount tailnet-ports claude-remote; do
