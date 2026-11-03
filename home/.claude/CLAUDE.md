@@ -34,6 +34,9 @@ These apply in every project. A project's own CLAUDE.md or AGENTS.md wins where 
 - Do what was asked, at the size it was asked. Don't add features, refactors, or files I didn't ask for.
 - Before saying something works, run it and show the evidence. If you couldn't verify it, say that.
 - Find the root cause before fixing a bug. No guess-and-patch loops.
+- Never fail silently. No fallbacks that hide an error, no config knob nothing reads, no fake data in real paths. If it can't do what was asked, return an error that says so.
+- A decision that moves a boundary or closes off an option gets a short record: what was decided, what it costs, and the alternative rejected.
+- PRs: a diagram of the change, then evidence. A visual change needs real before/after screenshots; anything else needs the command or test output. Then what breaks if it's wrong. No narration of how we got there.
 
 ## Skills worth reaching for
 
