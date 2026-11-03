@@ -38,7 +38,7 @@ These apply in every project. A project's own CLAUDE.md or AGENTS.md wins where 
 ## Skills worth reaching for
 
 - Design: `frontend-design` for direction, `emil-design-eng` and the `better-*` set for polish, `better-interface` or `interface-review` for a review.
-- Writing: `technical-writing` for docs and comments, `write-report` for results and findings, `unslop` to clean a draft, `writing-for-agents` for skills and CLAUDE.md files.
+- Writing: `technical-writing` for docs and comments, `write-report` for results and findings, `unslop` to clean a draft, `writing-for-agents` for skills and CLAUDE.md files, `pr` for pull request bodies.
 - Explaining: `show-me` for a visual explanation, `mermaid-diagrams` for correct Mermaid.
 - Thinking: `grilling` to stress-test a plan, `discernment-nudge` after advice I'll act on.
 - Engineering: `karpathy-guidelines` while coding, `code-quality` for naming, layout and cleanup, `codebase-design` for module interfaces, `receiving-code-review` before acting on review feedback, `systematic-debugging`, `verification-before-completion`.

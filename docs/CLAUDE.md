@@ -30,6 +30,7 @@ All are vendored unchanged from their upstream (minus Codex-only `agents/` folde
 | `write-report` | Honest results write-ups: every number and citation sourced, measured vs suggested | this repo | MIT |
 | `unslop` | Remove AI tells from a draft (run with `/unslop`) | [cursor/plugins](https://github.com/cursor/plugins) | MIT |
 | `writing-for-agents` | Writing skills, CLAUDE.md and AGENTS.md | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT |
+| `pr` | PR body: a diagram of the change, before/after evidence (screenshots first), merge risk | mattpocock/skills | MIT |
 | `show-me` | Explain the current topic visually (run with `/show-me`) | [humanlayer/skills](https://github.com/humanlayer/skills) | MIT |
 | `mermaid-diagrams` | Mermaid that renders | [ccheney/robust-skills](https://github.com/ccheney/robust-skills) | MIT |
 | `grilling` | Stress-test a plan, one round of questions at a time | mattpocock/skills | MIT |
